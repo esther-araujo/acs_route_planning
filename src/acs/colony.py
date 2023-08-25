@@ -94,7 +94,7 @@ class AntColonySystem:
             # Reset ant for the next iteration
             ant.reset(np.random.choice(ant.get_visited_nodes()))
 
-        return best_distance, best_solution
+        return best_solution, best_distance
         
     def run(self):
             #ReadInstance
@@ -104,10 +104,10 @@ class AntColonySystem:
             distances = nx.floyd_warshall_numpy(G)  # Matriz de distancias com floyd marshall
             
             #ComputeNearestNeighborLists
-            # .........
+            # ......... ???
 
             #ComputeChoiceInformation
-            # .........
+            # ......... ???
 
             #InitializeAnts
             ants = []
@@ -132,7 +132,6 @@ class AntColonySystem:
 
             return best_solution, best_distance
 
-# Example usage
 G = nx.Graph()
 G.add_weighted_edges_from([(0, 1, 200), (0, 2, 202), (0, 3, 212), (1, 3, 212), (2, 3, 40)])
 
