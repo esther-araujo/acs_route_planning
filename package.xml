@@ -58,13 +58,15 @@
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>tuw_geometry</build_export_depend>
-  <build_export_depend>tuw_msgs</build_export_depend>
   <build_export_depend>tuw_multi_robot</build_export_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>tuw_msgs</build_depend>
+  <exec_depend>tuw_msgs</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>tuw_geometry</exec_depend>
-  <exec_depend>tuw_msgs</exec_depend>
   <exec_depend>tuw_multi_robot</exec_depend>
 
 
