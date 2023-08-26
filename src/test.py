@@ -159,7 +159,7 @@ vertices = [{
           "z": 0
         }
       ],
-      "weight": 2,
+      "weight": 10,
       "width": 0.800000011920929,
       "successors": [
         7
@@ -231,7 +231,7 @@ vertices = [{
           "z": 0
         }
       ],
-      "weight": 2,
+      "weight": 3,
       "width": 0.800000011920929,
       "successors": [
         10
