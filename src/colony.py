@@ -126,7 +126,7 @@ class AntColonySystem:
             # Fill the diagonal with zeros
             np.fill_diagonal(distance_matrix, 0)
 
-            # Compute the shortest path distances using Dijkstra's algorithm
+            # Compute the shortest path distances
             for node in G.nodes():
                 shortest_paths = nx.shortest_path_length(G, source=node, weight='weight')
                 for target, distance in shortest_paths.items():
@@ -149,21 +149,21 @@ class AntColonySystem:
             #InitializeAnts
             ants = []
 
-            # for _ in range(self.num_ants):
-            #     start_node = np.random.randint(self.num_nodes)
-            #     ant = Ant(start_node, self.num_nodes, distance_matrix)
-            #     ants.append(ant)
+            for _ in range(self.num_ants):
+                start_node = np.random.randint(self.num_nodes)
+                ant = Ant(start_node, self.num_nodes, distance_matrix)
+                ants.append(ant)
                 
             best_solution = []
             best_distance = float('inf')
 
             # Pode ser num de iterações, tempo limite de cpu, encontrou uma solução aceitavel dentro de um limite especificado, 
             # algoritmo demonstrou estagnação, etc
-            # for _ in range(self.num_iterations):
-            #     #ConstructSolutions
-            #     best_solution, best_distance = self.construct_solutions(ants) 
-            #     #LocalSearch
-            #     # .........
+            for _ in range(self.num_iterations):
+                #ConstructSolutions
+                best_solution, best_distance = self.construct_solutions(ants) 
+                #LocalSearch
+                # .........
 
             return best_solution, best_distance
 
@@ -704,8 +704,9 @@ def create_nx_graph(vertice):
 
     # Add nodes with coordinates and edges
     for vertex in vertices:
-        G.add_node(vertex["id"], coord=vertex["path"][0])
-        G.add_node(vertex["id"], coord=vertex["path"][1])
+        # print(vertex)
+        G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']))
+        G.add_node(vertex["id"]+1, pos=(vertex["path"][1]['x'], vertex["path"][1]['y']))
 
     # Add edges to the graph based on the predecessor and successor information
     for vertex in vertices:
@@ -713,9 +714,9 @@ def create_nx_graph(vertice):
             G.add_edge(vertex["id"], successor_id, weight=vertex['weight'])
 
     # Draw the graph using Matplotlib
-    # pos = nx.get_node_attributes(G, 'pos')
-    # nx.draw(G, pos, with_labels=True, node_size=100, node_color='skyblue', font_size=10, font_color='black', arrows=False)
-    # plt.show()
+    pos = nx.get_node_attributes(G, 'pos')
+    nx.draw(G, pos, with_labels=True, node_size=100, node_color='skyblue', font_size=10, font_color='black', arrows=False)
+    plt.show()
 
     return G
 
