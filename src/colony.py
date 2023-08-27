@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 import networkx as nx
-import yaml
 import rospy
 import numpy as np
 from ant import Ant 
 from tuw_multi_robot_msgs.msg import Graph
 import matplotlib.pyplot as plt
 from tabulate import tabulate
-import json
+import math
 
 ants = []
 
@@ -169,7 +168,7 @@ class AntColonySystem:
 
             return best_solution, best_distance
 
-def xml_to_json(input_data):
+def xml_to_dict(input_data):
     message_list = []
     for graph_msg in input_data:
         message_dict = {
@@ -186,7 +185,7 @@ def xml_to_json(input_data):
     return message_list
 
 def create_nx_graph(vertice):
-    vertices = xml_to_json(vertice)
+    vertices = xml_to_dict(vertice)
     
     G = nx.Graph()
 
@@ -194,10 +193,16 @@ def create_nx_graph(vertice):
     for vertex in vertices:
         G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']))
 
+    x_start_edge = vertex["path"][0]['x']
+    y_start_edge = vertex["path"][0]['y']
+
+    x_end_edge = vertex["path"][1]['x']
+    y_end_edge = vertex["path"][1]['y']
+
     # Add edges to the graph based on the predecessor and successor information
     for vertex in vertices:
         for successor_id in vertex["successors"]:
-            G.add_edge(vertex["id"], successor_id, weight=vertex['weight'])
+            G.add_edge(vertex["id"], successor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
 
     # Draw the graph using Matplotlib
     pos = nx.get_node_attributes(G, 'pos')
@@ -206,6 +211,8 @@ def create_nx_graph(vertice):
 
     return G
 
+def calculate_edge_weight(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
 def callback(data):
     rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.vertices)
