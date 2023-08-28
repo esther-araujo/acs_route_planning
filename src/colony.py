@@ -193,11 +193,12 @@ def create_nx_graph(vertice):
     for vertex in vertices:
         G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']))
 
+    vertex_len = (len(vertex["path"]))
     x_start_edge = vertex["path"][0]['x']
     y_start_edge = vertex["path"][0]['y']
 
-    x_end_edge = vertex["path"][1]['x']
-    y_end_edge = vertex["path"][1]['y']
+    x_end_edge = vertex["path"][vertex_len-1]['x']
+    y_end_edge = vertex["path"][vertex_len-1]['y']
 
     # Add edges to the graph based on the predecessor and successor information
     for vertex in vertices:
@@ -206,7 +207,7 @@ def create_nx_graph(vertice):
 
     # Draw the graph using Matplotlib
     pos = nx.get_node_attributes(G, 'pos')
-    nx.draw(G, pos, with_labels=True, node_size=100, node_color='skyblue', font_size=10, font_color='black', arrows=False)
+    nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
     plt.show()
 
     return G

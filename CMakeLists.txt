@@ -11,10 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  tuw_geometry
-  geometry_msgs
   tuw_multi_robot_demo
-  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -73,7 +70,6 @@ find_package(catkin REQUIRED COMPONENTS
   generate_messages(
   DEPENDENCIES
   std_msgs
-  tuw_msgs
  )
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -107,7 +103,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES acs_route_planning
-#  CATKIN_DEPENDS roscpp rospy std_msgs tuw_msgs 
+#  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
 
