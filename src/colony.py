@@ -11,7 +11,7 @@ import math
 ants = []
 
 class AntColonySystem:
-    def __init__(self, graph, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local):
+    def __init__(self, graph, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local):
         self.graph = graph
         self.num_nodes = graph.number_of_nodes()
         self.num_ants = num_ants
@@ -20,6 +20,8 @@ class AntColonySystem:
         self.beta = beta
         self.rho = rho
         self.q0 = q0
+        self.goal = goal
+
 
         self.rho_local = rho_local
         self.tau_0_local = tau_0_local
@@ -67,7 +69,7 @@ class AntColonySystem:
         
         return next_node
 
-    # Fazer modificações para ACS (esta em AS)
+    # Ant Colony System - Pheromone is only update by the successfull ants
     def update_pheromone(self, ant):
         #Evaporate
         self.evaporate_pheromones()
@@ -75,15 +77,14 @@ class AntColonySystem:
         tour_length = ant.total_distance
         
         # Calculate the amount of pheromone to deposit on each edge
-        pheromone_deposit = 1 / tour_length
-        
-        for i in range(len(ant.visited_nodes) - 1):
-            from_node = ant.visited_nodes[i]
-            to_node = ant.visited_nodes[i + 1]
-            
-            # Update pheromone level on the edge (from_node, to_node)
-            self.pheromone[from_node][to_node] += pheromone_deposit
-            self.pheromone[to_node][from_node] += pheromone_deposit  
+        pheromone_deposit = self.q0 / tour_length
+
+        # pheromone update based on successful ants
+        for ant in ants:
+            if ant.get_current_node() == ant.target_node:
+                for i in range(len(ant.visited_nodes) - 1):
+                    self.pheromone[(ant.visited_nodes[i], ant.path[i + 1])] += pheromone_deposit
+ 
 
     # Local Pheromone Update for ACS
     def local_pheromone_update(self, from_node, to_node):
@@ -98,7 +99,7 @@ class AntColonySystem:
         best_solution = []
         best_distance = float('inf')
         for ant in ants:
-            while not ant.has_visited_all_nodes():
+            while not ant.has_visited_all_nodes() and ant.get_current_node() is not self.goal :
                 next_node = self.select_next_node(ant)
                 ant.visit(next_node)
                 # Always update local pheromone after an ant moves to the next node
@@ -132,14 +133,6 @@ class AntColonySystem:
                 shortest_paths = nx.shortest_path_length(G, source=node, weight='weight')
                 for target, distance in shortest_paths.items():
                     distance_matrix[node-1][target-1] = distance
-
-            ## To verify distance matrix
-            # node_ids = list(G.nodes())
-            # table_headers = [""] + node_ids
-            # table_data = [[node_id] + distances_row.tolist() for node_id, distances_row in zip(node_ids, distance_matrix)]
-            # table = tabulate(table_data, headers=table_headers, tablefmt="grid")
-            # print("Distance Matrix:")
-            # print(table)
             
             #ComputeNearestNeighborLists
             # ......... ???
@@ -152,7 +145,7 @@ class AntColonySystem:
 
             for _ in range(self.num_ants):
                 start_node = np.random.randint(self.num_nodes)
-                ant = Ant(start_node, self.num_nodes, distance_matrix)
+                ant = Ant(start_node, self.goal, self.num_nodes, distance_matrix)
                 ants.append(ant)
                 
             best_solution = []
@@ -206,9 +199,9 @@ def create_nx_graph(vertice):
             G.add_edge(vertex["id"], successor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
 
     # Draw the graph using Matplotlib
-    pos = nx.get_node_attributes(G, 'pos')
-    nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
-    plt.show()
+    # pos = nx.get_node_attributes(G, 'pos')
+    # nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
+    # plt.show()
 
     return G
 
@@ -231,7 +224,8 @@ def listener():
 
     G = create_nx_graph(graph_data.vertices)
 
-    num_ants = 10
+    goal = 6
+    num_ants = 50
     num_iterations = 200
     alpha = 1.0
     beta = 2.0
@@ -240,8 +234,10 @@ def listener():
     tau_0_local = 0.1
     q0 = 0.5
 
-    acs = AntColonySystem(G, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local)
+    acs = AntColonySystem(G, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local)
     best_solution, best_distance = acs.run()
+
+    print(len(best_solution))
 
     print("Best solution:", best_solution)
     print("Best distance:", best_distance)

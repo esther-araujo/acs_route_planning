@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 class Ant:
-    def __init__(self, start_node, num_nodes, distances):
+    def __init__(self, start_node, target_node, num_nodes, distances):
         self.start_node = start_node
+        self.target_node = target_node
         self.visited_nodes = [start_node]
         self.num_nodes = num_nodes
         self.distances = distances  # Distance matrix
