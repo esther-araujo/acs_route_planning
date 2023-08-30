@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 
 class Ant:
-    def __init__(self, start_node, target_node, num_nodes, distances):
+    def __init__(self, start_node, target_node, num_nodes, distances, found_goal):
         self.start_node = start_node
         self.target_node = target_node
         self.visited_nodes = [start_node]
         self.num_nodes = num_nodes
         self.distances = distances  # Distance matrix
         self.total_distance = 0.0
+        self.found_goal = found_goal
+        self.steps = 0
     
     def has_visited_all_nodes(self):
         return len(self.visited_nodes) == self.num_nodes
     
-    def visit(self, node):
+    def visit(self, node, edge):
         # Add the visited node to the list and update the total distance
         self.visited_nodes.append(node)
-        if len(self.visited_nodes) > 1:
-            prev_node = self.visited_nodes[-2]
-            self.total_distance += self.distances[prev_node][node]
+        print(edge)
+        if len(self.visited_nodes) > 1 and edge:
+            self.total_distance += edge['weight']
     
     def get_current_node(self):
         return self.visited_nodes[-1]
@@ -30,4 +32,6 @@ class Ant:
         
     def reset(self, start_node):
         self.visited_nodes = [start_node]
+        self.found_goal = False
         self.total_distance = 0.0
+        self.steps = 0
