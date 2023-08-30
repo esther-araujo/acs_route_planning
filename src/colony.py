@@ -35,12 +35,12 @@ class AntColonySystem:
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
 
-        # Mínimo local
-        # if not available_nodes:
-        #     ant.reset(np.random.choice(self.num_nodes))
-        #     available_nodes = [node for node in self.graph.neighbors(current_node) if node not in ant.visited_nodes]
+        # Enquanto não tiver nenhum nó disponivel, a formiga é resetada pra um nó aleatório
+        while not available_nodes:
+            ant.reset(np.random.choice(self.num_nodes))
+            current_node = ant.visited_nodes[-1]
+            available_nodes = [node for node in self.graph.neighbors(current_node)]
 
-        
         probabilities = []
         total_prob = 0.0
         
@@ -110,8 +110,8 @@ class AntColonySystem:
         best_solution = []
         best_distance = float('inf')
 
-        # Modificar para uma lógica baseada em heuristica
-        max_steps = 50
+        # Máximo de passos do tour de cada formiga
+        max_steps = self.num_nodes 
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.get_current_node() is not self.goal and ant.steps < max_steps:
@@ -120,8 +120,6 @@ class AntColonySystem:
                     curr_node = ant.visited_nodes[-1]
                     edge = self.graph.get_edge_data(curr_node, next_node)
                     ant.visit(next_node, edge)
-                    # Always update local pheromone after an ant moves to the next node
-                    #self.local_pheromone_update(curr_node, next_node)
                     ant.steps = ant.steps + 1
                     if next_node == ant.target_node:
                         ant.found_goal = True
@@ -134,6 +132,7 @@ class AntColonySystem:
             
             # Reset ant for the next iteration
             ant.reset(np.random.choice(self.num_nodes))
+            ant.steps = 0
 
         return best_solution, best_distance
         
@@ -150,12 +149,12 @@ class AntColonySystem:
             # algoritmo demonstrou estagnação, etc
             for _ in range(self.num_iterations):
                 #ConstructSolutions
-                self.construct_solutions(ants) 
+                print(self.construct_solutions(ants))
                 #LocalSearch
                 # .........
+            # Última formiga, saindo do ponto inicial, utilizando as informações prévias
             ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
             best_solution, best_distance = self.construct_solutions([ant])
-            print(ants)
             return best_solution, best_distance
 
 def xml_to_dict(input_data):
@@ -184,19 +183,17 @@ def create_nx_graph(vertice):
     for vertex in vertices:
         G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']), successors=vertex['successors'])
 
-    vertex_len = (len(vertex["path"]))
-    x_start_edge = vertex["path"][0]['x']
-    y_start_edge = vertex["path"][0]['y']
-
-    x_end_edge = vertex["path"][vertex_len-1]['x']
-    y_end_edge = vertex["path"][vertex_len-1]['y']
-
     # Add edges to the graph based on the predecessor and successor information
     for vertex in vertices:
+        vertex_len = (len(vertex["path"]))
+        x_start_edge = vertex["path"][0]['x']
+        y_start_edge = vertex["path"][0]['y']
+
+        x_end_edge = vertex["path"][vertex_len-1]['x']
+        y_end_edge = vertex["path"][vertex_len-1]['y']
         for successor_id in vertex["successors"]:
             G.add_edge(vertex["id"], successor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
-
-    # Draw the graph using Matplotlib
+    
     pos = nx.get_node_attributes(G, 'pos')
     nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
     plt.show()
@@ -222,10 +219,10 @@ def listener():
 
     G = create_nx_graph(graph_data.vertices)
 
-    start = 30
+    start = 139
     goal = 6
-    num_ants = 20
-    num_iterations = 30
+    num_ants = 50
+    num_iterations = 200
     alpha = 1.0
     beta = 2.0
     rho = 0.1
