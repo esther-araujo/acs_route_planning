@@ -11,8 +11,9 @@ import math
 ants = []
 
 class AntColonySystem:
-    def __init__(self, graph, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local):
+    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local):
         self.graph = graph
+        self.start = start
         self.num_nodes = graph.number_of_nodes()
         self.num_ants = num_ants
         self.num_iterations = num_iterations
@@ -30,10 +31,15 @@ class AntColonySystem:
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
-        print(list(self.graph.neighbors(current_node)))
-        # Nó do grafo pelo índice
 
-        available_nodes = list(self.graph.neighbors(current_node))
+        # Get available nodes
+        available_nodes = [node for node in self.graph.neighbors(current_node)]
+
+        # Mínimo local
+        # if not available_nodes:
+        #     ant.reset(np.random.choice(self.num_nodes))
+        #     available_nodes = [node for node in self.graph.neighbors(current_node) if node not in ant.visited_nodes]
+
         
         probabilities = []
         total_prob = 0.0
@@ -80,18 +86,15 @@ class AntColonySystem:
         
         tour_length = ant.total_distance
         
+        epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
         # Calculate the amount of pheromone to deposit on each edge
-        pheromone_deposit = self.q0 / tour_length
+        pheromone_deposit = self.q0 / (tour_length+epsilon)
 
-        bpl, bp = float("inf"), None
         # pheromone update based on successful ants
         for ant in ants:
             if ant.found_goal:
-                if len(ant.visited_nodes) < bpl:
-                    bpl, bp = len(ant.visited_nodes), ant.visited_nodes
                 for i in range(len(ant.visited_nodes) - 1):
                     self.pheromone[(ant.visited_nodes[i], ant.visited_nodes[i + 1])] += pheromone_deposit
-        return bpl, bp
  
 
     # Local Pheromone Update for ACS
@@ -102,10 +105,9 @@ class AntColonySystem:
     def evaporate_pheromones(self):
         self.pheromone *= (1 - self.rho)
 
-    def construct_solutions(self, ants, cost_list):
+    def construct_solutions(self, ants):
 
         best_solution = []
-        best_path = []
         best_distance = float('inf')
 
         # Modificar para uma lógica baseada em heuristica
@@ -114,68 +116,46 @@ class AntColonySystem:
         for ant in ants:
             while ant.get_current_node() is not self.goal and ant.steps < max_steps:
                 next_node = self.select_next_node(ant)
-                curr_node = ant.visited_nodes[-1]
-                edge = self.graph.get_edge_data(curr_node, next_node)
-                ant.visit(next_node, edge)
-                # Always update local pheromone after an ant moves to the next node
-                self.local_pheromone_update(curr_node, next_node)
-                ant.steps = ant.steps + 1
-                if next_node == ant.target_node:
-                    ant.found_goal = True
+                if next_node:
+                    curr_node = ant.visited_nodes[-1]
+                    edge = self.graph.get_edge_data(curr_node, next_node)
+                    ant.visit(next_node, edge)
+                    # Always update local pheromone after an ant moves to the next node
+                    #self.local_pheromone_update(curr_node, next_node)
+                    ant.steps = ant.steps + 1
+                    if next_node == ant.target_node:
+                        ant.found_goal = True
             
-            ## Consertar a escolha do melhor caminho
-            if ant.start_node != self.goal:
-                bpl, bp = self.update_pheromone(ant)
-
-            if bpl < float("inf"):
-                best_solution.append(bpl)
-
-            if len(best_solution) > 0:
-                cost_list.append(min(best_solution))
-                if bpl <= min(best_solution):
-                    best_path = bp
+            if ant.total_distance < best_distance:
+                best_solution = ant.get_visited_nodes()
+                best_distance = ant.get_total_distance()
+            
+            self.update_pheromone(ant)
             
             # Reset ant for the next iteration
-            ant.reset(np.random.choice(ant.get_visited_nodes()))
-        if best_path:
-            return best_path, best_distance
-        return ([], []), []
+            ant.reset(np.random.choice(self.num_nodes))
+
+        return best_solution, best_distance
         
     def run(self):
-            #ReadInstance
-            G = self.graph
-            cost_list = []
-            #ComputeDistances
-            # Create a mapping of node IDs to matrix indices
-            n_nodes = len(G.nodes())
-            distance_matrix = np.full((n_nodes, n_nodes), np.inf)
-
-            # Fill the diagonal with zeros
-            np.fill_diagonal(distance_matrix, 0)
-
-            # Compute the shortest path distances
-            for node in G.nodes():
-                shortest_paths = nx.shortest_path_length(G, source=node, weight='weight')
-                for target, distance in shortest_paths.items():
-                    distance_matrix[node-1][target-1] = distance
-
             #InitializeAnts
             ants = []
-            target_node = 6
 
             for _ in range(self.num_ants):
                 start_node = np.random.randint(self.num_nodes)
-                ant = Ant(start_node, self.goal, target_node, self.num_nodes, distance_matrix)
+                ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
                 ants.append(ant)
 
             # Pode ser num de iterações, tempo limite de cpu, encontrou uma solução aceitavel dentro de um limite especificado, 
             # algoritmo demonstrou estagnação, etc
             for _ in range(self.num_iterations):
                 #ConstructSolutions
-                best_solution, best_distance = self.construct_solutions(ants, cost_list) 
+                self.construct_solutions(ants) 
                 #LocalSearch
                 # .........
-
+            ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
+            best_solution, best_distance = self.construct_solutions([ant])
+            print(ants)
             return best_solution, best_distance
 
 def xml_to_dict(input_data):
@@ -202,7 +182,7 @@ def create_nx_graph(vertice):
 
     # Add nodes with coordinates and edges
     for vertex in vertices:
-        G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']))
+        G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']), successors=vertex['successors'])
 
     vertex_len = (len(vertex["path"]))
     x_start_edge = vertex["path"][0]['x']
@@ -217,9 +197,9 @@ def create_nx_graph(vertice):
             G.add_edge(vertex["id"], successor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
 
     # Draw the graph using Matplotlib
-    # pos = nx.get_node_attributes(G, 'pos')
-    # nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
-    # plt.show()
+    pos = nx.get_node_attributes(G, 'pos')
+    nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
+    plt.show()
 
     return G
 
@@ -242,9 +222,10 @@ def listener():
 
     G = create_nx_graph(graph_data.vertices)
 
+    start = 30
     goal = 6
-    num_ants = 10
-    num_iterations = 50
+    num_ants = 20
+    num_iterations = 30
     alpha = 1.0
     beta = 2.0
     rho = 0.1
@@ -252,7 +233,7 @@ def listener():
     tau_0_local = 0.1
     q0 = 0.5
 
-    acs = AntColonySystem(graph=G, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
+    acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
     best_solution, best_distance = acs.run()
 
     print("Best solution:", best_solution)

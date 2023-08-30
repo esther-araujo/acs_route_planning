@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 class Ant:
-    def __init__(self, start_node, target_node, num_nodes, distances, found_goal):
+    def __init__(self, start_node, target_node, num_nodes, found_goal):
         self.start_node = start_node
         self.target_node = target_node
         self.visited_nodes = [start_node]
         self.num_nodes = num_nodes
-        self.distances = distances  # Distance matrix
         self.total_distance = 0.0
         self.found_goal = found_goal
         self.steps = 0
@@ -17,7 +16,6 @@ class Ant:
     def visit(self, node, edge):
         # Add the visited node to the list and update the total distance
         self.visited_nodes.append(node)
-        print(edge)
         if len(self.visited_nodes) > 1 and edge:
             self.total_distance += edge['weight']
     
@@ -34,4 +32,3 @@ class Ant:
         self.visited_nodes = [start_node]
         self.found_goal = False
         self.total_distance = 0.0
-        self.steps = 0
