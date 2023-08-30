@@ -111,7 +111,7 @@ class AntColonySystem:
         best_distance = float('inf')
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes 
+        max_steps = self.num_nodes *2
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.get_current_node() is not self.goal and ant.steps < max_steps:
@@ -132,7 +132,6 @@ class AntColonySystem:
             
             # Reset ant for the next iteration
             ant.reset(np.random.choice(self.num_nodes))
-            ant.steps = 0
 
         return best_solution, best_distance
         
@@ -149,7 +148,7 @@ class AntColonySystem:
             # algoritmo demonstrou estagnação, etc
             for _ in range(self.num_iterations):
                 #ConstructSolutions
-                print(self.construct_solutions(ants))
+                self.construct_solutions(ants)
                 #LocalSearch
                 # .........
             # Última formiga, saindo do ponto inicial, utilizando as informações prévias
@@ -219,10 +218,10 @@ def listener():
 
     G = create_nx_graph(graph_data.vertices)
 
-    start = 139
-    goal = 6
-    num_ants = 50
-    num_iterations = 200
+    start = 39
+    goal = 11
+    num_ants = 20
+    num_iterations = 100
     alpha = 1.0
     beta = 2.0
     rho = 0.1
