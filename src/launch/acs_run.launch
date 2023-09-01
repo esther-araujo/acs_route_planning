@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+
+<launch>
+    <node name="acs_running" pkg="acs_route_planning" type="colony.py" output="screen">
+    </node>
+</launch>
