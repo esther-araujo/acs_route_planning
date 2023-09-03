@@ -14,7 +14,7 @@
   <arg name="cfg" default="default" />
   <arg name="launch_path_synchronizer" default="false" />
   <arg name="load_segments" default="false" />
-  <arg name="map_name" default="cave" />
+  <arg name="map_name" default="" />
   <arg name="update_rate_info" default="1.0" />
 
   <!-- start map server publishing a image of the map-->
