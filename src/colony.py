@@ -46,27 +46,43 @@ class AntColonySystem:
             if unvisited :
                 available_nodes = unvisited
 
-        attractiveness = {}
+        probabilities = []
+        total_prob = 0.0
 
+        # Heuristica sem a matriz de distancias
         for node in available_nodes:
-            pheromone = self.pheromone[current_node][node]
-            heuristic_info = 1.0 / self.graph.get_edge_data(current_node, node)['weight']  # Replace with your heuristic function
-            attractiveness[node] = (pheromone**self.alpha) * (heuristic_info**self.beta)
+            pheromone_value = self.pheromone[current_node][node]
+            heuristic_value = 1.0 / self.graph.get_edge_data(current_node, node)['weight'] 
+            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
+            probabilities.append(probability)
+            total_prob += probability
+        
+        # Normalize probabilities
+        epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
+        probabilities = [prob / (total_prob + epsilon) for prob in probabilities]
+        
+        # Choose the next node based on the ACS probability formula
+        random_value = np.random.rand()
 
-        # Calculate the total attractiveness
-        total_attractiveness = sum(attractiveness.values())
-
-        # Perform roulette wheel selection
-        roulette_wheel = np.random.uniform(0, total_attractiveness)
-        cumulative_probability = 0
-
-        for neighbor, attr in attractiveness.items():
-            cumulative_probability += attr
-            if cumulative_probability >= roulette_wheel:
-                return neighbor
-
-        # In case of rounding errors, return the first neighboor
-        return available_nodes[0]
+        if random_value < self.q0:
+            next_node = available_nodes[np.argmax(probabilities)]
+        else:
+            roulette_wheel = np.cumsum(probabilities)
+            max_cumulative_prob = roulette_wheel[-1]
+            
+            # Adjust random_value if it's very close to or slightly above 1
+            if random_value >= max_cumulative_prob:
+                random_value = max_cumulative_prob - 1e-10  # Adjust to ensure it's within range
+            
+            next_node_index = np.searchsorted(roulette_wheel, random_value)
+            
+            # Handle index out of range error
+            if next_node_index >= len(available_nodes):
+                next_node = available_nodes[-1]  # Choose the last unvisited node
+            else:
+                next_node = available_nodes[next_node_index]
+        
+        return next_node
 
     # Ant Colony System - Pheromone is only update by the successfull ants
     def update_pheromone(self, ant):
@@ -100,7 +116,7 @@ class AntColonySystem:
         best_distance = float('inf')
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes * 2
+        max_steps = self.num_nodes 
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.get_current_node() is not self.goal and ant.steps < max_steps:
@@ -109,7 +125,7 @@ class AntColonySystem:
                 edge = self.graph.get_edge_data(curr_node, next_node)
                 ant.visit(next_node, edge)
                 ant.steps = ant.steps + 1
-                #self.local_pheromone_update(curr_node, next_node)
+                self.local_pheromone_update(curr_node, next_node)
                 if next_node == ant.target_node:
                     ant.found_goal = True
             
