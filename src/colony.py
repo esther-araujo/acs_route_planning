@@ -3,9 +3,12 @@ import networkx as nx
 import rospy
 import numpy as np
 from ant import Ant 
+from geometry_msgs.msg import PointStamped
 from tuw_multi_robot_msgs.msg import Graph
+from  tuw_multi_robot_msgs.msg import Vertex
 import matplotlib.pyplot as plt
 import math
+from scipy.spatial import cKDTree
 
 ants = []
 
@@ -48,6 +51,9 @@ class AntColonySystem:
 
         probabilities = []
         total_prob = 0.0
+
+        if self.goal in available_nodes:
+            return self.goal
 
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
@@ -205,9 +211,12 @@ def create_nx_graph(vertice):
 def calculate_edge_weight(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-def callback(data):
-    rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.vertices)
-    
+def find_closest_node_efficient(graph, kdtree, target_node):
+    position_target = target_node['pos']
+    _, index = kdtree.query(position_target)
+    closest_node = list(graph.nodes())[index]
+    return closest_node
+
 def listener():
 
     # In ROS, nodes are uniquely named. If two nodes with the same
@@ -219,11 +228,40 @@ def listener():
 
     graph_data = rospy.wait_for_message('segments', Graph)
 
+    v_count = len(graph_data.vertices)
+
     G = create_nx_graph(graph_data.vertices)
 
-    start = 39
-    goal = 11
-    num_ants = 20
+    # Initialize a counter to keep track of received messages
+    message_count = 0
+    required_message_count = 2  # Change this to the number of messages you want to wait for
+    positions = [G.nodes[id]['pos'] for id in G.nodes()]
+
+    while message_count < required_message_count:
+        try:
+            # Wait for a message on the desired topic with a timeout
+            message = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
+            id_v = v_count if message_count == 0 else (v_count+1)
+            # 8 x 8 do mapa
+            G.add_node(id_v, pos=(message.point.x+8, message.point.y+8))
+            
+            kdtree = cKDTree(positions)
+
+            node = G.nodes[id_v]
+
+            # Use the find_closest_node_efficient function to find the closest node for each node and create edges
+            closest = find_closest_node_efficient(G, kdtree, node)
+            if closest is not None and closest != node:
+                G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+8, message.point.x+8, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+
+            message_count += 1
+        except rospy.ROSException:
+            rospy.logwarn("Timeout waiting for a message.")
+
+    
+    start = v_count
+    goal = v_count + 1
+    num_ants = 30
     num_iterations = 50
     alpha = 1.0
     beta = 2.0
@@ -246,7 +284,6 @@ def listener():
     pos = nx.get_node_attributes(G, 'pos')
     nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
     plt.show()
-
 
     rospy.spin()
 
