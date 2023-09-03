@@ -39,53 +39,34 @@ class AntColonySystem:
             ant.reset(np.random.choice(self.num_nodes))
             current_node = ant.visited_nodes[-1]
             available_nodes = [node for node in self.graph.neighbors(current_node)]
+            
+        # Force ant to go to new nodes if its possible
+        if len(available_nodes) > 1:
+            unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
+            if unvisited :
+                available_nodes = unvisited
 
-        # # Force ant to go to new nodes if its possible
-        # if len(available_nodes) > 1:
-        #     print(available_nodes)
-        #     unvisited = [node for node in available_nodes if node not in [ant.visited_nodes[-2]]]
-        #     if unvisited :
-        #         available_nodes = unvisited
-        #         print(available_nodes)
+        attractiveness = {}
 
-
-        probabilities = []
-        total_prob = 0.0
-        
-        # Heuristica sem a matriz de distancias
         for node in available_nodes:
-            pheromone_value = self.pheromone[current_node][node]
-            heuristic_value = 1.0 / self.graph.get_edge_data(current_node, node)['weight'] 
-            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
-            probabilities.append(probability)
-            total_prob += probability
-        
-        # Normalize probabilities
-        epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
-        probabilities = [prob / (total_prob + epsilon) for prob in probabilities]
-        
-        # Choose the next node based on the ACS probability formula
-        random_value = np.random.rand()
+            pheromone = self.pheromone[current_node][node]
+            heuristic_info = 1.0 / self.graph.get_edge_data(current_node, node)['weight']  # Replace with your heuristic function
+            attractiveness[node] = (pheromone**self.alpha) * (heuristic_info**self.beta)
 
-        if random_value < self.q0:
-            next_node = available_nodes[np.argmax(probabilities)]
-        else:
-            roulette_wheel = np.cumsum(probabilities)
-            max_cumulative_prob = roulette_wheel[-1]
-            
-            # Adjust random_value if it's very close to or slightly above 1
-            if random_value >= max_cumulative_prob:
-                random_value = max_cumulative_prob - 1e-10  # Adjust to ensure it's within range
-            
-            next_node_index = np.searchsorted(roulette_wheel, random_value)
-            
-            # Handle index out of range error
-            if next_node_index >= len(available_nodes):
-                next_node = available_nodes[-1]  # Choose the last unvisited node
-            else:
-                next_node = available_nodes[next_node_index]
-        
-        return next_node
+        # Calculate the total attractiveness
+        total_attractiveness = sum(attractiveness.values())
+
+        # Perform roulette wheel selection
+        roulette_wheel = np.random.uniform(0, total_attractiveness)
+        cumulative_probability = 0
+
+        for neighbor, attr in attractiveness.items():
+            cumulative_probability += attr
+            if cumulative_probability >= roulette_wheel:
+                return neighbor
+
+        # In case of rounding errors, return the first neighboor
+        return available_nodes[0]
 
     # Ant Colony System - Pheromone is only update by the successfull ants
     def update_pheromone(self, ant):
@@ -119,19 +100,18 @@ class AntColonySystem:
         best_distance = float('inf')
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes *2
+        max_steps = self.num_nodes * 2
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.get_current_node() is not self.goal and ant.steps < max_steps:
                 next_node = self.select_next_node(ant)
-                if next_node:
-                    curr_node = ant.visited_nodes[-1]
-                    edge = self.graph.get_edge_data(curr_node, next_node)
-                    ant.visit(next_node, edge)
-                    ant.steps = ant.steps + 1
-                    #self.local_pheromone_update(curr_node, next_node)
-                    if next_node == ant.target_node:
-                        ant.found_goal = True
+                curr_node = ant.visited_nodes[-1]
+                edge = self.graph.get_edge_data(curr_node, next_node)
+                ant.visit(next_node, edge)
+                ant.steps = ant.steps + 1
+                #self.local_pheromone_update(curr_node, next_node)
+                if next_node == ant.target_node:
+                    ant.found_goal = True
             
             if ant.total_distance < best_distance:
                 best_solution = ant.get_visited_nodes()
@@ -189,7 +169,7 @@ def create_nx_graph(vertice):
 
     # Add nodes with coordinates and edges
     for vertex in vertices:
-        G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']), successors=vertex['successors'])
+        G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']), successors=vertex['successors'], predecessors=vertex['predecessors'])
 
     # Add edges to the graph based on the predecessor and successor information
     for vertex in vertices:
@@ -201,10 +181,8 @@ def create_nx_graph(vertice):
         y_end_edge = vertex["path"][vertex_len-1]['y']
         for successor_id in vertex["successors"]:
             G.add_edge(vertex["id"], successor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
-    
-    # pos = nx.get_node_attributes(G, 'pos')
-    # nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
-    # plt.show()
+        for predecessor_id in vertex["predecessors"]:
+            G.add_edge(vertex["id"], predecessor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
 
     return G
 
@@ -229,8 +207,8 @@ def listener():
 
     start = 39
     goal = 11
-    num_ants = 80
-    num_iterations = 100
+    num_ants = 20
+    num_iterations = 50
     alpha = 1.0
     beta = 2.0
     rho = 0.1
@@ -254,7 +232,6 @@ def listener():
     plt.show()
 
 
-    # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
 if __name__ == '__main__':
