@@ -5,7 +5,6 @@ import numpy as np
 from ant import Ant 
 from tuw_multi_robot_msgs.msg import Graph
 import matplotlib.pyplot as plt
-from tabulate import tabulate
 import math
 
 ants = []
@@ -40,6 +39,15 @@ class AntColonySystem:
             ant.reset(np.random.choice(self.num_nodes))
             current_node = ant.visited_nodes[-1]
             available_nodes = [node for node in self.graph.neighbors(current_node)]
+
+        # # Force ant to go to new nodes if its possible
+        # if len(available_nodes) > 1:
+        #     print(available_nodes)
+        #     unvisited = [node for node in available_nodes if node not in [ant.visited_nodes[-2]]]
+        #     if unvisited :
+        #         available_nodes = unvisited
+        #         print(available_nodes)
+
 
         probabilities = []
         total_prob = 0.0
@@ -121,6 +129,7 @@ class AntColonySystem:
                     edge = self.graph.get_edge_data(curr_node, next_node)
                     ant.visit(next_node, edge)
                     ant.steps = ant.steps + 1
+                    #self.local_pheromone_update(curr_node, next_node)
                     if next_node == ant.target_node:
                         ant.found_goal = True
             
@@ -193,9 +202,9 @@ def create_nx_graph(vertice):
         for successor_id in vertex["successors"]:
             G.add_edge(vertex["id"], successor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
     
-    pos = nx.get_node_attributes(G, 'pos')
-    nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
-    plt.show()
+    # pos = nx.get_node_attributes(G, 'pos')
+    # nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
+    # plt.show()
 
     return G
 
@@ -220,7 +229,7 @@ def listener():
 
     start = 39
     goal = 11
-    num_ants = 20
+    num_ants = 80
     num_iterations = 100
     alpha = 1.0
     beta = 2.0
@@ -234,10 +243,16 @@ def listener():
 
     print("Best solution:", best_solution)
     print("Best distance:", best_distance)
+    edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+
+
+    edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+
 
     pos = nx.get_node_attributes(G, 'pos')
-    nx.draw(G, pos, with_labels=True, node_size=40, node_color='skyblue', font_size=10, font_color='black', arrows=False)
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
     plt.show()
+
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
