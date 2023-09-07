@@ -91,7 +91,7 @@ class AntColonySystem:
         return next_node
 
     # Ant Colony System - Pheromone is only update by the successfull ants
-    def update_pheromone(self, ant, ants_found_goal):
+    def update_pheromone(self, ant):
         #Evaporate
         self.evaporate_pheromones()
         
@@ -102,10 +102,12 @@ class AntColonySystem:
         pheromone_deposit = self.q0 / (tour_length+epsilon)
 
         # pheromone update based on successful ants
-        for ant in ants_found_goal:
-            for i in range(len(ant.visited_nodes) - 1):
-                self.pheromone[(ant.visited_nodes[i], ant.visited_nodes[i + 1])] += pheromone_deposit
+        for ant in ants:
+            if ant.found_goal:
+                for i in range(len(ant.visited_nodes) - 1):
+                    self.pheromone[(ant.visited_nodes[i], ant.visited_nodes[i + 1])] += pheromone_deposit
  
+
     # Local Pheromone Update for ACS
     def local_pheromone_update(self, from_node, to_node):
         self.pheromone[from_node][to_node] = (1-self.rho_local)*self.pheromone[from_node][to_node]+(self.rho_local*self.tau_0_local)
@@ -118,55 +120,30 @@ class AntColonySystem:
 
         best_solution = []
         best_distance = float('inf')
-        best_distance_tour = float('inf')
-        ants_found_goal = []
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes * 2
+        max_steps = self.num_nodes 
         # Perform ant tours and update pheromones
         for ant in ants:
-            while ant.steps < max_steps:
+            while ant.get_current_node() is not self.goal and ant.steps < max_steps:
                 next_node = self.select_next_node(ant)
                 curr_node = ant.visited_nodes[-1]
                 edge = self.graph.get_edge_data(curr_node, next_node)
                 ant.visit(next_node, edge)
                 ant.steps = ant.steps + 1
                 self.local_pheromone_update(curr_node, next_node)
-                if next_node == ant.target_node and ant.total_distance < best_distance_tour:
-                    best_distance_tour = ant.get_total_distance()
-                    ants_found_goal.append(ant)
-                    ant.reset(np.random.choice(self.num_nodes))
+                if next_node == ant.target_node:
+                    ant.found_goal = True
             
             if ant.total_distance < best_distance:
                 best_solution = ant.get_visited_nodes()
                 best_distance = ant.get_total_distance()
             
-            self.update_pheromone(ant, ants_found_goal)
+            self.update_pheromone(ant)
             
             # Reset ant for the next iteration
             ant.reset(np.random.choice(self.num_nodes))
 
-        return best_solution, best_distance
-    
-    def create_final_solution(self, ant):
-
-        best_solution = []
-        best_distance = float('inf')
-
-        # Máximo de passos do tour da formiga
-        max_steps = self.num_nodes 
-        # Perform ant tours and update pheromones
-        while ant.get_current_node() is not self.goal and ant.steps < max_steps:
-            next_node = self.select_next_node(ant)
-            curr_node = ant.visited_nodes[-1]
-            edge = self.graph.get_edge_data(curr_node, next_node)
-            ant.visit(next_node, edge)
-            ant.steps = ant.steps + 1
-        
-        if ant.total_distance < best_distance:
-            best_solution = ant.get_visited_nodes()
-            best_distance = ant.get_total_distance()
-        
         return best_solution, best_distance
         
     def run(self):
@@ -187,7 +164,7 @@ class AntColonySystem:
                 # .........
             # Última formiga, saindo do ponto inicial, utilizando as informações prévias
             ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
-            best_solution, best_distance = self.create_final_solution(ant)
+            best_solution, best_distance = self.construct_solutions([ant])
             return best_solution, best_distance
 
 def xml_to_dict(input_data):
@@ -214,10 +191,7 @@ def create_nx_graph(vertice):
 
     # Add nodes with coordinates and edges
     for vertex in vertices:
-        vertex_len = (len(vertex["path"]))
         G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']), successors=vertex['successors'], predecessors=vertex['predecessors'])
-        # G.add_node(vertex["id"], pos=(vertex["path"][vertex_len-1]['x'], vertex["path"][vertex_len-1]['y']), successors=vertex['successors'], predecessors=vertex['predecessors'])
-
 
     # Add edges to the graph based on the predecessor and successor information
     for vertex in vertices:
@@ -287,8 +261,8 @@ def listener():
     
     start = v_count
     goal = v_count + 1
-    num_ants = 50
-    num_iterations = 100
+    num_ants = 30
+    num_iterations = 50
     alpha = 1.0
     beta = 2.0
     rho = 0.1
