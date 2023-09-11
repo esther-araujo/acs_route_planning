@@ -4,6 +4,7 @@ import rospy
 import numpy as np
 from ant import Ant 
 from geometry_msgs.msg import PointStamped
+from std_msgs.msg import String
 from tuw_multi_robot_msgs.msg import Graph
 from  tuw_multi_robot_msgs.msg import Vertex
 import matplotlib.pyplot as plt
@@ -188,23 +189,38 @@ def create_nx_graph(vertice):
     vertices = xml_to_dict(vertice)
     
     G = nx.Graph()
+    positions = {}
 
     # Add nodes with coordinates and edges
-    for vertex in vertices:
-        G.add_node(vertex["id"], pos=(vertex["path"][0]['x'], vertex["path"][0]['y']), successors=vertex['successors'], predecessors=vertex['predecessors'])
-
-    # Add edges to the graph based on the predecessor and successor information
+    i = 0
     for vertex in vertices:
         vertex_len = (len(vertex["path"]))
-        x_start_edge = vertex["path"][0]['x']
-        y_start_edge = vertex["path"][0]['y']
+        start_edge = (vertex["path"][0]['x'], vertex["path"][0]['y'])
 
-        x_end_edge = vertex["path"][vertex_len-1]['x']
-        y_end_edge = vertex["path"][vertex_len-1]['y']
-        for successor_id in vertex["successors"]:
-            G.add_edge(vertex["id"], successor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
-        for predecessor_id in vertex["predecessors"]:
-            G.add_edge(vertex["id"], predecessor_id, weight=calculate_edge_weight(x_start_edge, y_start_edge, x_end_edge, y_end_edge))
+        if start_edge not in positions.values():
+            G.add_node(i, pos=start_edge)
+            positions[i] = start_edge
+            i+=1
+        end_edge = (vertex["path"][vertex_len-1]['x'], vertex["path"][vertex_len-1]['y'])
+        if end_edge not in positions.values():
+            G.add_node(i, pos=end_edge)
+            positions[i] = end_edge
+            i+=1
+
+        start_node = None
+        end_node = None
+        for node, data in G.nodes(data=True):
+            if 'pos' in data and data['pos'] == start_edge:
+                start_node = node
+            elif 'pos' in data and data['pos'] == end_edge:
+                end_node = node
+
+        # Check if both nodes were found
+        if start_node == None and end_node == None:
+            print("Nodes with the specified positions not found.")
+        else:
+            # Add an edge between the identified nodes
+            G.add_edge(start_node, end_node, weight=calculate_edge_weight(start_edge[0], start_edge[1], end_edge[0], end_edge[1]))
 
     return G
 
@@ -225,17 +241,19 @@ def listener():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('acs_running', anonymous=True)
+    move_robot = rospy.Publisher('/move_robot', String, queue_size=10)
 
     graph_data = rospy.wait_for_message('segments', Graph)
-
-    v_count = len(graph_data.vertices)
 
     G = create_nx_graph(graph_data.vertices)
 
     # Initialize a counter to keep track of received messages
     message_count = 0
     required_message_count = 2  # Change this to the number of messages you want to wait for
-    positions = [G.nodes[id]['pos'] for id in G.nodes()]
+    positions = nx.get_node_attributes(G, 'pos')
+    v_count = len(positions)
+    position_list = list(positions.values())
+
 
     while message_count < required_message_count:
         try:
@@ -245,20 +263,20 @@ def listener():
             # 8 x 8 do mapa
             G.add_node(id_v, pos=(message.point.x+8, message.point.y+8))
             
-            kdtree = cKDTree(positions)
+            kdtree = cKDTree(position_list)
 
             node = G.nodes[id_v]
 
             # Use the find_closest_node_efficient function to find the closest node for each node and create edges
             closest = find_closest_node_efficient(G, kdtree, node)
             if closest is not None and closest != node:
-                G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+8, message.point.x+8, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+                print(G.nodes[closest]['pos'])
+                G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+8, message.point.y+8, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
             message_count += 1
         except rospy.ROSException:
             rospy.logwarn("Timeout waiting for a message.")
 
-    
     start = v_count
     goal = v_count + 1
     num_ants = 30
@@ -273,19 +291,17 @@ def listener():
     acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
     best_solution, best_distance = acs.run()
 
+    move_robot.publish("move")
+
     print("Best solution:", best_solution)
     print("Best distance:", best_distance)
     edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-
     edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
-
 
     pos = nx.get_node_attributes(G, 'pos')
     nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
     plt.show()
-
-    rospy.spin()
 
 if __name__ == '__main__':
     listener()

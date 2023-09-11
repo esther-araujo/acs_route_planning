@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  move_base_msgs
+  actionlib
   tuw_multi_robot_demo
 )
 
@@ -70,6 +72,8 @@ find_package(catkin REQUIRED COMPONENTS
   generate_messages(
   DEPENDENCIES
   std_msgs
+  actionlib
+  move_base_msgs
  )
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -103,7 +107,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES acs_route_planning
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+#  CATKIN_DEPENDS roscpp rospy std_msgs move_base_msgs actionlib
 #  DEPENDS system_lib
 )
 
@@ -159,6 +163,7 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 # catkin_install_python(PROGRAMS
 #   src/colony.py
+#   src/test.py
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 #)
 
