@@ -9,7 +9,7 @@
   <arg name="launch_local_controller" default="true" />
   <arg name="launch_local_controller_one_for_all" default="false" />
   <arg name="nr_of_robots" default="3" />
-
+  <arg name="launch_stage" default="true" />
   <arg name="launch_graph_generator" default="true" />
   <arg name="cfg" default="default" />
   <arg name="launch_path_synchronizer" default="false" />
@@ -48,5 +48,20 @@
   </group>
 
   <!-- run a node with acs algorithm-->
-  <include file="$(find acs_route_planning)/src/launch/acs_run.launch"/>
+  <include file="$(find acs_route_planning)/src/launch/acs_run.launch" />
+  
+  <!-- stage -->
+  <group if="$(arg launch_stage)">
+    <include file="$(find acs_route_planning)/src/launch/stage.launch">
+      <arg name="room" value="$(arg room)" />
+    </include>
+  </group>
+
+  <!--- Run Move Base -->  
+  <!-- <include file="$(find p3at_tutorial)/launch/move_base.launch">
+    <arg name="no_static_map" value="true"/>
+  </include> -->
+
+  <!-- run a node to make robot walk-->
+  <!-- <include file="$(find acs_route_planning)/src/launch/robot_walk.launch" /> -->
 </launch>

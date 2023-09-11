@@ -4,6 +4,7 @@ import rospy
 import numpy as np
 from ant import Ant 
 from geometry_msgs.msg import PointStamped
+from std_msgs.msg import String
 from tuw_multi_robot_msgs.msg import Graph
 from  tuw_multi_robot_msgs.msg import Vertex
 import matplotlib.pyplot as plt
@@ -240,6 +241,7 @@ def listener():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('acs_running', anonymous=True)
+    move_robot = rospy.Publisher('/move_robot', String, queue_size=10)
 
     graph_data = rospy.wait_for_message('segments', Graph)
 
@@ -251,6 +253,7 @@ def listener():
     positions = nx.get_node_attributes(G, 'pos')
     v_count = len(positions)
     position_list = list(positions.values())
+
 
     while message_count < required_message_count:
         try:
@@ -287,6 +290,8 @@ def listener():
 
     acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
     best_solution, best_distance = acs.run()
+
+    move_robot.publish("move")
 
     print("Best solution:", best_solution)
     print("Best distance:", best_distance)
