@@ -51,11 +51,11 @@
   <include file="$(find acs_route_planning)/src/launch/acs_run.launch" />
   
   <!-- stage -->
-  <group if="$(arg launch_stage)">
+  <!-- <group if="$(arg launch_stage)">
     <include file="$(find acs_route_planning)/src/launch/stage.launch">
       <arg name="room" value="$(arg room)" />
     </include>
-  </group>
+  </group> -->
 
   <!--- Run Move Base -->  
   <!-- <include file="$(find p3at_tutorial)/launch/move_base.launch">

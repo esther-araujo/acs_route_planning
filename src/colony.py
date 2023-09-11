@@ -38,24 +38,37 @@ class AntColonySystem:
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
 
-        # Enquanto não tiver nenhum nó disponivel, a formiga é resetada pra um nó aleatório
-        while not available_nodes:
+        # Mínimo local, volta pro ponto no grafo onde tem mais de duas opções (sai do mínimo) e remove o feromonio do 
+        # caminho que leva ao mínimo local
+
+        if len(available_nodes) == 1 and current_node is not self.start and current_node is not self.goal:
+            pre = ant.visited_nodes[len(ant.visited_nodes)-2]
+            for curr in reversed(ant.visited_nodes):
+                # remove pheromone
+                self.remove_pheromone(curr, pre)
+                available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
+                current_node = curr
+                if len(available_nodes) > 2:
+                    available_nodes = available_nodes = [node for node in self.graph.neighbors(curr) if node is not self.start]
+                    break 
+                pre = curr
+
+        # Force ant to go to new nodes if its possible, if its not, reset ant
+        unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
+        while not unvisited:
             ant.reset(np.random.choice(self.num_nodes))
             current_node = ant.visited_nodes[-1]
-            available_nodes = [node for node in self.graph.neighbors(current_node)]
-            
-        # Force ant to go to new nodes if its possible
-        if len(available_nodes) > 1:
             unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
-            if unvisited :
-                available_nodes = unvisited
+            
+        available_nodes = unvisited
+                
 
         probabilities = []
         total_prob = 0.0
 
         if self.goal in available_nodes:
             return self.goal
-
+        
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
             pheromone_value = self.pheromone[current_node][node]
@@ -113,9 +126,38 @@ class AntColonySystem:
     def local_pheromone_update(self, from_node, to_node):
         self.pheromone[from_node][to_node] = (1-self.rho_local)*self.pheromone[from_node][to_node]+(self.rho_local*self.tau_0_local)
         self.pheromone[to_node][from_node] = (1-self.rho_local)*self.pheromone[from_node][to_node]+(self.rho_local*self.tau_0_local)
+    
+    def remove_pheromone(self, from_node, to_node):
+        self.pheromone[from_node][to_node] = 0.0
+        self.pheromone[to_node][from_node] = 0.0
 
     def evaporate_pheromones(self):
         self.pheromone *= (1 - self.rho)
+    
+    def final_solution(self, ants):
+
+        best_solution = []
+        best_distance = float('inf')
+
+        # Máximo de passos do tour de cada formiga
+        max_steps = self.num_nodes * 2
+        # Perform ant tours and update pheromones
+        for ant in ants:
+            while ant.steps < max_steps and ant.get_current_node() != self.goal:
+                next_node = self.select_next_node(ant)
+                curr_node = ant.visited_nodes[-1]
+                edge = self.graph.get_edge_data(curr_node, next_node)
+                ant.visit(next_node, edge)
+                ant.steps = ant.steps + 1
+                self.local_pheromone_update(curr_node, next_node)
+                if next_node == ant.target_node:
+                    ant.found_goal = True
+            
+            if ant.total_distance < best_distance:
+                best_solution = ant.get_visited_nodes()
+                best_distance = ant.get_total_distance()
+            
+        return best_solution, best_distance
 
     def construct_solutions(self, ants):
 
@@ -123,7 +165,7 @@ class AntColonySystem:
         best_distance = float('inf')
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes 
+        max_steps = self.num_nodes * 2
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.steps < max_steps:
@@ -165,7 +207,7 @@ class AntColonySystem:
                 # .........
             # Última formiga, saindo do ponto inicial, utilizando as informações prévias
             ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
-            best_solution, best_distance = self.construct_solutions([ant])
+            best_solution, best_distance = self.final_solution([ant])
             return best_solution, best_distance
 
 def xml_to_dict(input_data):
@@ -270,7 +312,6 @@ def listener():
             # Use the find_closest_node_efficient function to find the closest node for each node and create edges
             closest = find_closest_node_efficient(G, kdtree, node)
             if closest is not None and closest != node:
-                print(G.nodes[closest]['pos'])
                 G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+8, message.point.y+8, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
             message_count += 1
@@ -279,8 +320,8 @@ def listener():
 
     start = v_count
     goal = v_count + 1
-    num_ants = 30
-    num_iterations = 50
+    num_ants = 100
+    num_iterations = 70
     alpha = 1.0
     beta = 2.0
     rho = 0.1
@@ -295,6 +336,7 @@ def listener():
 
     print("Best solution:", best_solution)
     print("Best distance:", best_distance)
+
     edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
     edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
