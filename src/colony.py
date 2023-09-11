@@ -126,7 +126,7 @@ class AntColonySystem:
         max_steps = self.num_nodes 
         # Perform ant tours and update pheromones
         for ant in ants:
-            while ant.get_current_node() is not self.goal and ant.steps < max_steps:
+            while ant.steps < max_steps:
                 next_node = self.select_next_node(ant)
                 curr_node = ant.visited_nodes[-1]
                 edge = self.graph.get_edge_data(curr_node, next_node)
