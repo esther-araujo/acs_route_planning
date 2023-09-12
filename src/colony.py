@@ -41,9 +41,9 @@ class AntColonySystem:
 
         # Mínimo local, volta pro ponto no grafo onde tem mais de duas opções (sai do mínimo) e remove o feromonio do 
         # caminho que leva ao mínimo local
-        if len(available_nodes) == 1 and current_node is not self.start and current_node is not self.goal:
+        if len(available_nodes) == 1 and current_node is not self.start:
             pre = ant.visited_nodes[len(ant.visited_nodes)-2]
-            for curr in reversed(ant.visited_nodes):
+            for curr in reversed(ant.visited_nodes[:-1]):
                 # remove pheromone
                 self.remove_pheromone(curr, pre)
                 available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
@@ -154,7 +154,6 @@ class AntColonySystem:
             self.update_pheromone(ants_done_tour)
             # Reset ant for the next iteration
             ant.reset(np.random.choice(self.num_nodes))
-
         return best_solution
         
     def run(self):
@@ -193,7 +192,6 @@ def xml_to_dict(input_data):
         message_list.append(message_dict)
 
     return message_list
-
 
 def create_nx_graph(vertice):
     vertices = xml_to_dict(vertice)
@@ -300,7 +298,7 @@ def listener():
     acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
     best_solution = acs.run()
 
-    best_solution = remove_loops_from_path(best_solution, goal)
+    #best_solution = remove_loops_from_path(best_solution, goal)
 
     total_cost, best_solution = calculate_path_cost(G, best_solution)
     move_robot.publish("move")
