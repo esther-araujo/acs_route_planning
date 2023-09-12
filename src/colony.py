@@ -10,6 +10,7 @@ from  tuw_multi_robot_msgs.msg import Vertex
 import matplotlib.pyplot as plt
 import math
 from scipy.spatial import cKDTree
+from itertools import groupby
 
 ants = []
 
@@ -40,7 +41,6 @@ class AntColonySystem:
 
         # Mínimo local, volta pro ponto no grafo onde tem mais de duas opções (sai do mínimo) e remove o feromonio do 
         # caminho que leva ao mínimo local
-
         if len(available_nodes) == 1 and current_node is not self.start and current_node is not self.goal:
             pre = ant.visited_nodes[len(ant.visited_nodes)-2]
             for curr in reversed(ant.visited_nodes):
@@ -48,20 +48,17 @@ class AntColonySystem:
                 self.remove_pheromone(curr, pre)
                 available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
                 current_node = curr
+                ant.visited_nodes.append(current_node)
                 if len(available_nodes) > 2:
                     available_nodes = available_nodes = [node for node in self.graph.neighbors(curr) if node is not self.start]
                     break 
                 pre = curr
-
-        # Force ant to go to new nodes if its possible, if its not, reset ant
-        unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
-        while not unvisited:
-            ant.reset(np.random.choice(self.num_nodes))
-            current_node = ant.visited_nodes[-1]
-            unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
-            
-        available_nodes = unvisited
                 
+        # Force ant to go to new nodes if its possible
+        if len(available_nodes) > 1:
+            unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
+            if unvisited :
+                available_nodes = unvisited
 
         probabilities = []
         total_prob = 0.0
@@ -105,21 +102,17 @@ class AntColonySystem:
         return next_node
 
     # Ant Colony System - Pheromone is only update by the successfull ants
-    def update_pheromone(self, ant):
+    def update_pheromone(self, ants):
         #Evaporate
         self.evaporate_pheromones()
-        
-        tour_length = ant.total_distance
-        
-        epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
-        # Calculate the amount of pheromone to deposit on each edge
-        pheromone_deposit = self.q0 / (tour_length+epsilon)
-
         # pheromone update based on successful ants
         for ant in ants:
-            if ant.found_goal:
-                for i in range(len(ant.visited_nodes) - 1):
-                    self.pheromone[(ant.visited_nodes[i], ant.visited_nodes[i + 1])] += pheromone_deposit
+            tour_length = ant.total_distance
+            epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
+            # Calculate the amount of pheromone to deposit on each edge
+            pheromone_deposit = self.q0 / (tour_length+epsilon)
+            for i in range(len(ant.visited_nodes) - 1):
+                self.pheromone[(ant.visited_nodes[i], ant.visited_nodes[i + 1])] += pheromone_deposit
  
 
     # Local Pheromone Update for ACS
@@ -133,31 +126,6 @@ class AntColonySystem:
 
     def evaporate_pheromones(self):
         self.pheromone *= (1 - self.rho)
-    
-    def final_solution(self, ants):
-
-        best_solution = []
-        best_distance = float('inf')
-
-        # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes * 2
-        # Perform ant tours and update pheromones
-        for ant in ants:
-            while ant.steps < max_steps and ant.get_current_node() != self.goal:
-                next_node = self.select_next_node(ant)
-                curr_node = ant.visited_nodes[-1]
-                edge = self.graph.get_edge_data(curr_node, next_node)
-                ant.visit(next_node, edge)
-                ant.steps = ant.steps + 1
-                self.local_pheromone_update(curr_node, next_node)
-                if next_node == ant.target_node:
-                    ant.found_goal = True
-            
-            if ant.total_distance < best_distance:
-                best_solution = ant.get_visited_nodes()
-                best_distance = ant.get_total_distance()
-            
-        return best_solution, best_distance
 
     def construct_solutions(self, ants):
 
@@ -166,6 +134,7 @@ class AntColonySystem:
 
         # Máximo de passos do tour de cada formiga
         max_steps = self.num_nodes * 2
+        ants_done_tour = []
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.steps < max_steps:
@@ -176,18 +145,17 @@ class AntColonySystem:
                 ant.steps = ant.steps + 1
                 self.local_pheromone_update(curr_node, next_node)
                 if next_node == ant.target_node:
-                    ant.found_goal = True
-            
+                    ants_done_tour.append(ant)
+                    
             if ant.total_distance < best_distance:
                 best_solution = ant.get_visited_nodes()
                 best_distance = ant.get_total_distance()
-            
-            self.update_pheromone(ant)
-            
+
+            self.update_pheromone(ants_done_tour)
             # Reset ant for the next iteration
             ant.reset(np.random.choice(self.num_nodes))
 
-        return best_solution, best_distance
+        return best_solution
         
     def run(self):
             #InitializeAnts
@@ -207,8 +175,8 @@ class AntColonySystem:
                 # .........
             # Última formiga, saindo do ponto inicial, utilizando as informações prévias
             ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
-            best_solution, best_distance = self.final_solution([ant])
-            return best_solution, best_distance
+            best_solution = self.construct_solutions([ant])
+            return best_solution
 
 def xml_to_dict(input_data):
     message_list = []
@@ -330,12 +298,15 @@ def listener():
     q0 = 0.5
 
     acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
-    best_solution, best_distance = acs.run()
+    best_solution = acs.run()
 
+    best_solution = remove_loops_from_path(best_solution, goal)
+
+    total_cost, best_solution = calculate_path_cost(G, best_solution)
     move_robot.publish("move")
 
     print("Best solution:", best_solution)
-    print("Best distance:", best_distance)
+    print("Best distance:", total_cost)
 
     edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
@@ -344,6 +315,46 @@ def listener():
     pos = nx.get_node_attributes(G, 'pos')
     nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
     plt.show()
+
+def calculate_path_cost(graph, path):
+    cost = 0  # Initialize the cost to 0
+    current_node = path[0]  # Start from the first node in the path
+    final_path = [current_node]
+
+    for i in range(1, len(path)):
+        next_node = path[i]  # Get the next node in the path
+        final_path.append(next_node)
+        # Check if the edge exists in the graph
+        if graph.has_edge(current_node, next_node):
+            edge_weight = graph[current_node][next_node]['weight']
+            cost += edge_weight
+        else:
+            raise ValueError(f"Edge ({current_node}, {next_node}) does not exist in the graph")
+
+        current_node = next_node  # Move to the next node
+
+    return cost, final_path
+
+def remove_loops_from_path(path, x):
+    unique_path = []
+    visited = set()
+    x_encountered = False
+
+    for vertex in path:
+        if vertex == x:
+            x_encountered = True
+        if vertex not in visited:
+            unique_path.append(vertex)
+            visited.add(vertex)
+        elif vertex == unique_path[0]:
+            unique_path.append(vertex)
+            visited.add(vertex)
+        elif x_encountered:
+            break
+
+    return unique_path
+
+
 
 if __name__ == '__main__':
     listener()
