@@ -298,13 +298,14 @@ def listener():
     acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
     best_solution = acs.run()
 
-    #best_solution = remove_loops_from_path(best_solution, goal)
-
-    total_cost, best_solution = calculate_path_cost(G, best_solution)
-    move_robot.publish("move")
-
-    print("Best solution:", best_solution)
-    print("Best distance:", total_cost)
+    if goal in best_solution:
+        idx = best_solution.index(goal)
+        best_solution = remove_loops_from_path(best_solution[:idx+1])
+        total_cost, best_solution = calculate_path_cost(G, best_solution)
+        move_robot.publish("move")
+        print("GOAL FOUNDED")
+        print("Best solution:", best_solution)
+        print("Best distance:", total_cost)
 
     edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
@@ -328,31 +329,27 @@ def calculate_path_cost(graph, path):
             cost += edge_weight
         else:
             raise ValueError(f"Edge ({current_node}, {next_node}) does not exist in the graph")
-
         current_node = next_node  # Move to the next node
 
     return cost, final_path
 
-def remove_loops_from_path(path, x):
+def remove_loops_from_path(path):
     unique_path = []
     visited = set()
-    x_encountered = False
 
     for vertex in path:
-        if vertex == x:
-            x_encountered = True
         if vertex not in visited:
             unique_path.append(vertex)
             visited.add(vertex)
         elif vertex == unique_path[0]:
+            # If we return to the starting vertex, consider it as part of the unique path
             unique_path.append(vertex)
             visited.add(vertex)
-        elif x_encountered:
-            break
-
+        else:
+            # If we revisit a non-starting vertex, remove it and all vertices in between
+            while unique_path[-1] != vertex:
+                visited.remove(unique_path.pop())
     return unique_path
-
-
 
 if __name__ == '__main__':
     listener()
