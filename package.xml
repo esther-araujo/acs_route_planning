@@ -55,6 +55,8 @@
   <build_depend>move_base_msgs</build_depend>
   <build_depend>tuw_geometry</build_depend>
   <build_depend>tuw_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
   <build_depend>tuw_multi_robot</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
@@ -63,6 +65,8 @@
   <build_export_depend>move_base_msgs</build_export_depend>
   <build_export_depend>tuw_geometry</build_export_depend>
   <build_export_depend>tuw_multi_robot</build_export_depend>
+  <build_export_depend>nav_msgs</build_export_depend>
+  <build_export_depend>geometry_msgs</build_export_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>tuw_msgs</build_depend>
   <exec_depend>tuw_msgs</exec_depend>
@@ -74,8 +78,8 @@
   <exec_depend>move_base_msgs</exec_depend>
   <exec_depend>tuw_geometry</exec_depend>
   <exec_depend>tuw_multi_robot</exec_depend>
-  <exec_depend>stage_ros</exec_depend>
-
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

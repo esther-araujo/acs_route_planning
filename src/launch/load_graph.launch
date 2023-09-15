@@ -24,6 +24,9 @@
     </include>
   </group>
 
+    <!-- run a node to make robot walk-->
+    <!-- <include file="$(find acs_route_planning)/src/launch/robot_walk.launch" /> -->
+
   <!-- generate voronoi graph-->
   <group if="$(arg launch_graph_generator)">
     <group if="$(arg load_segments)">
@@ -62,6 +65,5 @@
     <arg name="no_static_map" value="true"/>
   </include> -->
 
-  <!-- run a node to make robot walk-->
-  <!-- <include file="$(find acs_route_planning)/src/launch/robot_walk.launch" /> -->
+
 </launch>

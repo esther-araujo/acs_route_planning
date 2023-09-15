@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   move_base_msgs
+  nav_msgs 
+  geometry_msgs
   actionlib
   tuw_multi_robot_demo
 )
@@ -73,6 +75,8 @@ find_package(catkin REQUIRED COMPONENTS
   DEPENDENCIES
   std_msgs
   actionlib
+  nav_msgs 
+  geometry_msgs
   move_base_msgs
  )
 ################################################
@@ -107,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES acs_route_planning
-#  CATKIN_DEPENDS roscpp rospy std_msgs move_base_msgs actionlib
+#  CATKIN_DEPENDS roscpp rospy std_msgs move_base_msgs actionlib nav_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 
