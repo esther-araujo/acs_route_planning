@@ -1,0 +1,29 @@
+<?xml version="1.0" ?>
+
+<sdf version="1.6">
+  <world name="my_world">
+    <!-- Other world parameters go here -->
+    <model name="terrain">
+      <static>true</static> <!-- This makes the terrain static -->
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <heightmap>
+              <uri>file://src/maps/cave/heightmap.png</uri>
+              <!-- You can specify other parameters like size and resolution here -->
+            </heightmap>
+          </geometry>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <heightmap>
+              <uri>file://src/maps/cave/heightmap.png</uri>
+              <!-- You can specify other parameters like size and resolution here -->
+            </heightmap>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>
