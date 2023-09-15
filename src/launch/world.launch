@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<launch>
+
+	<arg name="world" default="empty.world" />
+
+	<env name="GAZEBO_MODEL_PATH" value="$(find heightmap_generation)/config/models/" />
+	<env name="GAZEBO_RESOURCE_PATH" value="$(find heightmap_generation)/config/files/" />
+
+	<include file="$(find gazebo_ros)/launch/empty_world.launch">
+		<arg name="world_name" value="$(find heightmap_generation)/config/worlds/$(arg world)" />
+		<!-- world_name is wrt GAZEBO_RESOURCE_PATH environment variable -->
+		<arg name="paused" value="false" />
+		<arg name="use_sim_time" value="true" />
+		<arg name="gui" value="true" />
+		<arg name="headless" value="false" />
+		<arg name="debug" value="false" />
+	</include>
+
+	<include file="$(find p3at_tutorial)/launch/upload_pioneer3at.xml" />
+
+	<arg name="x" default="-5" />
+	<arg name="y" default="0" />
+	<arg name="z" default="0" />
+
+	<!-- push robot_description to factory and spawn robot in gazebo -->
+	<node name="spawn_pioneer" pkg="gazebo_ros" type="spawn_model"
+		args="-urdf -param robot_description -model Pioneer3at -x $(arg x) -y $(arg y) -z $(arg z)"
+		respawn="false" output="screen" />
+
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find p3at_tutorial)/launch/gazebo.rviz" />
+
+	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+</launch>
