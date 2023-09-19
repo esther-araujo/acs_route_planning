@@ -24,7 +24,7 @@ def generate_island_map(width, height, num_obstacles):
     # Cria um contorno preto
     draw.rectangle([(0, 0), (width - 1, height - 1)], outline=border_color)
 
-    # Gere=a as ilhas aleatoriamente
+    # Gera as ilhas aleatoriamente
     for _ in range(num_obstacles):
         island_size = random.randint(20, 150)
         x1 = random.randint(0, width - island_size)
@@ -32,7 +32,7 @@ def generate_island_map(width, height, num_obstacles):
         x2 = x1 + island_size
         y2 = y1 + island_size
 
-        # Desenhe a ilha em azul
+        # Desenhe a ilha
         draw.rectangle([(x1, y1), (x2, y2)], fill=obstacle_color)
 
     return mapa
