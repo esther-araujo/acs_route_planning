@@ -52,6 +52,8 @@ def generate_island_map(width, height, num_obstacles):
     # Cria um contorno preto
     draw.rectangle([(0, 0), (width - 1, height - 1)], outline=border_color)
 
+    obstacles = [] 
+
     # Gera as ilhas aleatoriamente
     for _ in range(num_obstacles):
         island_size = random.randint(20, 150)
@@ -60,8 +62,22 @@ def generate_island_map(width, height, num_obstacles):
         x2 = x1 + island_size
         y2 = y1 + island_size
 
-        # Desenhe a ilha
+        # Verifica a sobreposição com os obstáculos existentes
+        overlap = False
+        for obstacle in obstacles:
+            if (x1 < obstacle[2] and x2 > obstacle[0] and
+                y1 < obstacle[3] and y2 > obstacle[1]):
+                overlap = True
+                break
+
+        # Se houver sobreposição, gera um novo obstáculo
+        if overlap:
+            continue
+
         draw.rectangle([(x1, y1), (x2, y2)], fill=obstacle_color)
+
+        # Registra a posição do obstáculo
+        obstacles.append((x1, y1, x2, y2))
 
     return mapa
 
