@@ -249,7 +249,7 @@ def listener():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('acs_running', anonymous=True)
-    move_robot = rospy.Publisher('/move_robot', String, queue_size=10)
+    #move_robot = rospy.Publisher('/move_robot', String, queue_size=10)
 
     graph_data = rospy.wait_for_message('segments', Graph)
 
@@ -302,7 +302,7 @@ def listener():
         idx = best_solution.index(goal)
         best_solution = remove_loops_from_path(best_solution[:idx+1])
         total_cost, best_solution = calculate_path_cost(G, best_solution)
-        move_robot.publish("move")
+        #move_robot.publish("move")
         print("GOAL FOUNDED")
         print("Best solution:", best_solution)
         print("Best distance:", total_cost)
