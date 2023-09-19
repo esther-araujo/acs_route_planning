@@ -1,12 +1,17 @@
 from PIL import Image, ImageDraw
 import random
 import os
+import yaml
+import shutil
 
 # Crie um diretório para armazenar as imagens geradas
-if not os.path.exists("generated_maps"):
-    os.mkdir("generated_maps")
+# if not os.path.exists("generated_maps"):
+#     os.mkdir("generated_maps")
 
-num_maps = 100
+# Pasta com o gerador de grafos de voronoi
+path_multi_robot = "/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo"
+path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
+num_maps = 5
 
 
 map_width = 800
@@ -16,6 +21,29 @@ map_height = 600
 background_color = "white"
 obstacle_color = "black"
 border_color = "black"
+
+# graph yaml
+graph = {
+    'map_topic': "/map",
+    'map_inflation': 0.1,
+    'segments_topic': "/segments",
+    'segment_length': 0.6,
+    'opt_crossings': 0.2,
+    'opt_end_segments': 0.5
+}
+
+# map yaml 
+map = {
+    'image': "map.pgm",
+    'resolution': 0.032,
+    'origin': [-8.000000, -8.000000, 0.000000],
+    'negate':0,
+    'occupied_thresh': 0.65,
+    'free_thresh': 0.196
+}
+
+# Rviz config
+map_rviz = f"{path_route_planning}/src/map_creator/map.rviz"
 
 def generate_island_map(width, height, num_obstacles):
     mapa = Image.new("RGB", (width, height), background_color)
@@ -41,12 +69,31 @@ for i in range(num_maps):
     num_obstacles = random.randint(5, 20)
     mapa = generate_island_map(map_width, map_height, num_obstacles)
 
-    png_filename = f"generated_maps/mapa_{i + 1}.png"
-    mapa.save(png_filename)
-
-
-    pgm_filename = f"generated_maps/mapa_{i + 1}.pgm"
+    if not os.path.exists(f"{path_multi_robot}/cfg/maps/map{i + 1}"):
+        os.mkdir(f"{path_multi_robot}/cfg/maps/map{i + 1}")
+    if not os.path.exists(f"{path_multi_robot}/cfg/graph/map{i + 1}"):
+        os.mkdir(f"{path_multi_robot}/cfg/graph/map{i + 1}")
+    
+    # PGM
+    pgm_filename = f"{path_multi_robot}/cfg/maps/map{i + 1}/map.pgm"
     mapa_gray = mapa.convert("L")
     mapa_gray.save(pgm_filename)
+
+    # Map yaml
+    file_path = f"{path_multi_robot}/cfg/maps/map{i + 1}/map.yaml"
+
+    with open(file_path, 'w') as file:
+        yaml.dump(map, file)
+
+    # Graph yaml
+    file_path = f"{path_multi_robot}/cfg/graph/map{i + 1}/graph.yaml"
+
+    with open(file_path, 'w') as file:
+        yaml.dump(map, file)
+
+    # Rviz config
+    rviz_voronoi = f"{path_multi_robot}/cfg/rviz/map{i+1}.rviz" 
+
+    shutil.copy(map_rviz, rviz_voronoi)
 
 print("Mapas de obstaculos gerados com sucesso.")
