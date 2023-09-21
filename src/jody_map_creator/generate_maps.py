@@ -97,6 +97,7 @@ def generate_island_map(filename):
 
 
     rec= {}
+# randomMap17_DynOver_5_50_2_1
 
     # Draw rectangles and fill them
     for i in range(0, len(rectangles), 4):
@@ -106,9 +107,22 @@ def generate_island_map(filename):
         
     for chave in rec:
         sub_array = rec[chave]
+
+        # Desenhar obstáculo não preenchido
+        # x1,y1,x2,y2 = sub_array[0]
+        # x3,y3,x4,y4 = sub_array[1]
+        # x5,y5,x6,y6 = sub_array[2]
+        # x7,y7,x8,y8 = sub_array[3]
+        # draw.line([(x1, y1), (x2, y2)], fill=obstacle_color)
+        # draw.line([(x3, y3), (x4, y4)], fill=obstacle_color)
+        # draw.line([(x5, y5), (x6, y6)], fill=obstacle_color)
+        # draw.line([(x7, y7), (x8, y8)], fill=obstacle_color)
+
+        # Desenhar obstaculo preenchido
         x1,y1,x2,y2 = sub_array[0]
         x3,y3,x4,y4 = sub_array[2]
         draw.rectangle([(x1, y1), (x3, y3)], fill=obstacle_color)
+
 
     # Save the image as a PNG file
     return img
