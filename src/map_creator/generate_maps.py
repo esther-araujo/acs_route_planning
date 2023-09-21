@@ -11,7 +11,7 @@ import shutil
 # Pasta com o gerador de grafos de voronoi
 path_multi_robot = "/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo"
 path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
-num_maps = 5
+num_maps = 7
 
 
 map_width = 800
