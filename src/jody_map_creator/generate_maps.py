@@ -54,6 +54,8 @@ map_yaml = {
     'free_thresh': 0.196
 }
 
+limit = 0
+
 # Rviz config
 map_rviz = f"{path_route_planning}/src/map_creator/map.rviz"
 # Read the .map file
@@ -90,14 +92,15 @@ def generate_island_map(filename):
                     rectangles.append((x1, y1, x2, y2))
 
     # Create a white background image
-    img = Image.new("RGB", (map_width, map_height), "white")
-    draw = ImageDraw.Draw(img)
+    mapa = Image.new("RGB", (map_width, map_height), "white")
+    draw = ImageDraw.Draw(mapa)
 
     draw.rectangle([(0, 0), (map_width - 1, map_height - 1)], outline=border_color)
 
 
     rec= {}
-# randomMap17_DynOver_5_50_2_1
+
+    obstacles = [] 
 
     # Draw rectangles and fill them
     for i in range(0, len(rectangles), 4):
@@ -121,20 +124,24 @@ def generate_island_map(filename):
         # Desenhar obstaculo preenchido
         x1,y1,x2,y2 = sub_array[0]
         x3,y3,x4,y4 = sub_array[2]
+
+        # Verifica a sobreposição com os obstáculos existentes
+        overlap = False
+        for obstacle in obstacles:
+            if (x1 < obstacle[2] and x2 > obstacle[0] and
+                y1 < obstacle[3] and y2 > obstacle[1]):
+                overlap = True
+                break
+
+        # Se houver sobreposição, nao salva o mapa
+        if overlap:
+            return False
+
+        # Registra a posição do obstáculo
+        obstacles.append((x1, y1, x3, y3))
         draw.rectangle([(x1, y1), (x3, y3)], fill=obstacle_color)
 
-
-    # Save the image as a PNG file
-    return img
-
-files = os.listdir(path_route_planning+"/src/jody_map_creator/maps")
-
-# Loop through the files
-for filename in files:
-    filename = re.sub(r'\.map$', '', filename)
-    print(filename)
-    mapa = generate_island_map(filename)
-
+    
     if not os.path.exists(f"{path_multi_robot}/cfg/maps/{filename}"):
         os.mkdir(f"{path_multi_robot}/cfg/maps/{filename}")
     if not os.path.exists(f"{path_multi_robot}/cfg/graph/{filename}"):
@@ -161,6 +168,23 @@ for filename in files:
     rviz_voronoi = f"{path_multi_robot}/cfg/rviz/{filename}.rviz" 
 
     shutil.copy(map_rviz, rviz_voronoi)
+    return True
+
+files = os.listdir(path_route_planning+"/src/jody_map_creator/maps")
+
+limit = 0
+
+# Loop through the files
+for filename in files:
+    filename = re.sub(r'\.map$', '', filename)
+    print(filename)
+    map_generated = generate_island_map(filename)
+    if map_generated:
+        limit+=1
+        
+    if limit == 100:
+        break
+  
 
 print("Mapas de obstaculos gerados com sucesso.")
 
