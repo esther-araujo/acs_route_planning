@@ -10,7 +10,7 @@ from  tuw_multi_robot_msgs.msg import Vertex
 import matplotlib.pyplot as plt
 import math
 from scipy.spatial import cKDTree
-from itertools import groupby
+import yaml
 
 ants = []
 
@@ -249,6 +249,8 @@ def listener():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('acs_running', anonymous=True)
+    acs_config = rospy.get_param("~config_yaml", "simulate")  # Default simulate if there is no acs yaml param
+
     #move_robot = rospy.Publisher('/move_robot', String, queue_size=10)
 
     graph_data = rospy.wait_for_message('segments', Graph)
@@ -262,38 +264,73 @@ def listener():
     v_count = len(positions)
     position_list = list(positions.values())
 
-
-    while message_count < required_message_count:
-        try:
-            # Wait for a message on the desired topic with a timeout
-            message = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
-            id_v = v_count if message_count == 0 else (v_count+1)
-            # 8 x 8 do mapa
-            G.add_node(id_v, pos=(message.point.x+8, message.point.y+8))
-            
-            kdtree = cKDTree(position_list)
-
-            node = G.nodes[id_v]
-
-            # Use the find_closest_node_efficient function to find the closest node for each node and create edges
-            closest = find_closest_node_efficient(G, kdtree, node)
-            if closest is not None and closest != node:
-                G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+8, message.point.y+8, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
-
-            message_count += 1
-        except rospy.ROSException:
-            rospy.logwarn("Timeout waiting for a message.")
-
     start = v_count
     goal = v_count + 1
-    num_ants = 100
-    num_iterations = 70
+    num_ants = 100 # default
+    num_iterations = 70 # default
     alpha = 1.0
     beta = 2.0
     rho = 0.1
     rho_local = 0.1
     tau_0_local = 0.1
     q0 = 0.5
+
+
+    if acs_config != "simulate":
+        with open(acs_config, "r") as yaml_file:
+
+            # Parse the YAML data
+            data = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
+            # ACS PARAMETERS
+            num_ants = data["num_ants"]
+            num_iterations = data["num_it"]
+
+            # START
+            G.add_node(start, pos=(data["start_point_x"], data["start_point_y"]))
+            
+            kdtree = cKDTree(position_list)
+
+            node = G.nodes[start]
+
+            # Use the find_closest_node_efficient function to find the closest node for each node and create edges
+            closest = find_closest_node_efficient(G, kdtree, node)
+            if closest is not None and closest != node:
+                G.add_edge(start, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+            
+            # GOAL
+            G.add_node(goal, pos=(data["end_point_x"], data["end_point_y"]))
+            
+            kdtree = cKDTree(position_list)
+
+            node = G.nodes[goal]
+
+            # Use the find_closest_node_efficient function to find the closest node for each node and create edges
+            closest = find_closest_node_efficient(G, kdtree, node)
+            if closest is not None and closest != node:
+                G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+
+    else:
+        while message_count < required_message_count:
+            try:
+                # Wait for a message on the desired topic with a timeout
+                message = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
+                id_v = v_count if message_count == 0 else (v_count+1)
+                # 8 x 8 do mapa
+                G.add_node(id_v, pos=(message.point.x+8, message.point.y+8))
+                
+                kdtree = cKDTree(position_list)
+
+                node = G.nodes[id_v]
+
+                # Use the find_closest_node_efficient function to find the closest node for each node and create edges
+                closest = find_closest_node_efficient(G, kdtree, node)
+                if closest is not None and closest != node:
+                    G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+8, message.point.y+8, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+
+                message_count += 1
+            except rospy.ROSException:
+                rospy.logwarn("Timeout waiting for a message.")
 
     acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
     best_solution = acs.run()

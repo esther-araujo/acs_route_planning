@@ -4,17 +4,13 @@ import os
 import yaml
 import shutil
 
-# Crie um diretório para armazenar as imagens geradas
-# if not os.path.exists("generated_maps"):
-#     os.mkdir("generated_maps")
-
 # Pasta com o gerador de grafos de voronoi
 path_multi_robot = "/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo"
 path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
 num_maps = 7
 
 
-map_width = 800
+map_width = 600
 map_height = 600
 
 # Cores

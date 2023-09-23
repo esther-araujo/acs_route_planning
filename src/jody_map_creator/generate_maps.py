@@ -25,8 +25,7 @@ print("Arquivos .map copiados com sucesso!")
 
 num_maps = 1
 
-
-map_width = 800
+map_width = 600
 map_height = 600
 
 # Cores
@@ -39,33 +38,33 @@ graph_yaml = {
     'map_topic': "/map",
     'map_inflation': 0.1,
     'segments_topic': "/segments",
-    'segment_length': 0.6,
+    'segment_length': 0.70,
     'opt_crossings': 0.2,
-    'opt_end_segments': 0.5
+    'opt_end_segments': 0.4
 }
 
 # map yaml 
 map_yaml = {
     'image': "map.pgm",
-    'resolution': 0.032,
-    'origin': [-8.000000, -8.000000, 0.000000],
+    'resolution': 0.050000,
+    'origin': [-15.000000, -15.000000, 0.000000],
     'negate':0,
     'occupied_thresh': 0.65,
     'free_thresh': 0.196
 }
-
 limit = 0
 
 # Rviz config
 map_rviz = f"{path_route_planning}/src/map_creator/map.rviz"
 # Read the .map file
+def parse_map_file(file_path):
 
-
-def generate_island_map(filename):
-
-    # Replace 'your_map_file.map' with the actual file path
-    with open(path_route_planning+"/src/jody_map_creator/maps/"+filename+".map", 'r') as file:
+    with open(file_path, 'r') as file:
         map_data = file.read().splitlines()
+
+        start_point = None
+        end_point = None
+        colony = []
 
         # Initialize a list to store line coordinates
         rectangles = []
@@ -73,12 +72,25 @@ def generate_island_map(filename):
         # Flag to indicate whether we are currently reading lines
         reading_lines = False
 
+        # Flag to indicate whether we are currently reading colony
+        reading_colony = False
+
         # Iterate through the lines in the map data
         for line in map_data:
-            # Check if we've reached the "LINES" section
-            if line.strip() == "LINES":
-                reading_lines = True
+            if line.startswith("StartPoint"):
+                start_point_x, start_point_y = tuple(map(int, line.split()[1:]))
+                start_point = {"x": start_point_x, "y":start_point_y}
+            elif line.startswith("EndPoint"):
+                end_point_x, end_point_y = tuple(map(int, line.split()[1:]))
+                end_point = {"x": end_point_x, "y": end_point_y}            
                 continue  # Skip the "LINES" line itself
+            elif line.strip() == "LINES":
+                reading_lines = True
+                reading_colony = False
+                continue
+            elif line.strip() == "COLONY":
+                reading_colony = True
+                continue 
 
             # Check if we've reached the end of the lines section
             if reading_lines and line.strip() == "DATA":
@@ -90,6 +102,19 @@ def generate_island_map(filename):
                 if len(line_parts) == 4:
                     x1, y1, x2, y2 = map(int, line_parts)
                     rectangles.append((x1, y1, x2, y2))
+
+            # If we are in the colony section, parse the acs config
+            if reading_colony:
+                colony_conf = line.split()
+                colony.append(int(colony_conf[0]))
+                
+
+    return rectangles, start_point, end_point, colony
+
+def generate_island_map(filename):
+    
+    # Read test infos from .map file
+    rectangles, start_point, end_point, colony = parse_map_file(path_route_planning+"/src/jody_map_creator/maps/"+filename+".map")
 
     # Create a white background image
     mapa = Image.new("RGB", (map_width, map_height), "white")
@@ -128,8 +153,9 @@ def generate_island_map(filename):
         # Verifica a sobreposição com os obstáculos existentes
         overlap = False
         for obstacle in obstacles:
-            if (x1 < obstacle[2] and x2 > obstacle[0] and
-                y1 < obstacle[3] and y2 > obstacle[1]):
+            # Rever
+            if (x1 < obstacle[2] and x3 > obstacle[0] and
+                y1 < obstacle[3] and y3 > obstacle[1]):
                 overlap = True
                 break
 
@@ -146,6 +172,29 @@ def generate_island_map(filename):
         os.mkdir(f"{path_multi_robot}/cfg/maps/{filename}")
     if not os.path.exists(f"{path_multi_robot}/cfg/graph/{filename}"):
         os.mkdir(f"{path_multi_robot}/cfg/graph/{filename}")
+
+    # Normalizing start_point and end_point
+    start_point_x = (start_point["x"] * abs(map_yaml["origin"][0]*2) )/ map_width
+    end_point_x = (end_point["x"] * abs(map_yaml["origin"][0]*2) )/ map_width
+    start_point_y = (start_point["y"] * abs(map_yaml["origin"][0]*2) )/ map_height
+    end_point_y = (end_point["y"] * abs(map_yaml["origin"][0]*2) )/ map_height
+
+    # acs config yaml 
+    acs_yaml = {
+        'num_ants': colony[0],
+        'num_it': colony[1],
+        'repetitions': colony[2],
+        'start_point_x': start_point_x,
+        'start_point_y': start_point_y,
+        'end_point_x': end_point_x,
+        'end_point_y': end_point_y,
+    }
+
+    # Map yaml
+    file_path = f"{path_multi_robot}/cfg/maps/{filename}/acs_config.yaml"
+
+    with open(file_path, 'w') as file:
+        yaml.dump(acs_yaml, file)
     
     # PGM
     pgm_filename = f"{path_multi_robot}/cfg/maps/{filename}/map.pgm"

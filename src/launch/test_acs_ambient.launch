@@ -3,10 +3,10 @@
 <launch>
 
   <arg name="room" default="cave" />
-  <arg name="launch_rviz" default="true" />
+  <arg name="launch_rviz" default="false" />
   <arg name="launch_map_server" default="true" />
-  <arg name="launch_multi_robot_route_planner" default="true" />
-  <arg name="launch_local_controller" default="true" />
+  <arg name="launch_multi_robot_route_planner" default="false" />
+  <arg name="launch_local_controller" default="false" />
   <arg name="launch_local_controller_one_for_all" default="false" />
   <arg name="nr_of_robots" default="3" />
   <arg name="launch_stage" default="false" />
@@ -40,14 +40,8 @@
     </group>
   </group>
 
-  <!-- start rviz -->
-  <group if="$(arg launch_rviz)">
-    <include file="$(find tuw_multi_robot_demo)/launch/rviz.launch">
-      <arg name="cfg" value="$(arg room)" />
-    </include>
-  </group>
-
-  <!-- run a node with acs algorithm-->
-  <include file="$(find acs_route_planning)/src/launch/acs_run.launch" />
+  <include file="$(find acs_route_planning)/src/launch/acs_run_test.launch">
+    <arg name="room" value="$(arg room)" />
+  </include>
 
 </launch>
