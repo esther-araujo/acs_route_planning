@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 import math
 from scipy.spatial import cKDTree
 import yaml
+import subprocess
+
+# Pasta com o gerador de grafos de voronoi
+path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
 
 ants = []
 
@@ -251,6 +255,9 @@ def listener():
     rospy.init_node('acs_running', anonymous=True)
     acs_config = rospy.get_param("~config_yaml", "simulate")  # Default simulate if there is no acs yaml param
 
+    room = rospy.get_param("~room", "cave")  # Default cave if there is room param
+
+
     #move_robot = rospy.Publisher('/move_robot', String, queue_size=10)
 
     graph_data = rospy.wait_for_message('segments', Graph)
@@ -268,6 +275,7 @@ def listener():
     goal = v_count + 1
     num_ants = 100 # default
     num_iterations = 70 # default
+    num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
     rho = 0.1
@@ -285,6 +293,7 @@ def listener():
             # ACS PARAMETERS
             num_ants = data["num_ants"]
             num_iterations = data["num_it"]
+            num_rep = data["repetitions"]
 
             # START
             G.add_node(start, pos=(data["start_point_x"], data["start_point_y"]))
@@ -310,6 +319,48 @@ def listener():
             if closest is not None and closest != node:
                 G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
+        best_solution = acs.run()
+
+        if goal in best_solution:
+            idx = best_solution.index(goal)
+            best_solution = remove_loops_from_path(best_solution[:idx+1])
+            total_cost, best_solution = calculate_path_cost(G, best_solution)
+            #move_robot.publish("move")
+            print("GOAL FOUNDED")
+            print("Best solution:", best_solution)
+            print("Best distance:", total_cost)
+            # GENERATE LOG FILE
+            
+
+            # Specify the directory path where you want to save the file
+            log_path = path_route_planning+'/src/acs_logs/'
+
+            # Specify the file name and extension
+            log_file = f'{room}.log'
+
+            file_path = log_path + log_file
+
+            # The content you want to write to the file
+            file_content  = {
+                'startNode': start,
+                'endNode': goal,
+                'Ants': num_ants,
+                'Iterations': num_iterations,
+                'Repetitions': num_rep,
+                'distance': total_cost,
+                'nNodesBP': len(best_solution)
+            }   
+
+            # Attempt to create and write to the file
+            try:
+                with open(file_path, 'w') as file:
+                    yaml.dump(file_content, file, default_flow_style=False)
+
+            except FileNotFoundError:
+                print(f"Directory '{log_path}' does not exist.")
+            except Exception as e:
+                print(f"An error occurred: {e}")
     else:
         while message_count < required_message_count:
             try:
@@ -332,25 +383,25 @@ def listener():
             except rospy.ROSException:
                 rospy.logwarn("Timeout waiting for a message.")
 
-    acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
-    best_solution = acs.run()
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
+        best_solution = acs.run()
 
-    if goal in best_solution:
-        idx = best_solution.index(goal)
-        best_solution = remove_loops_from_path(best_solution[:idx+1])
-        total_cost, best_solution = calculate_path_cost(G, best_solution)
-        #move_robot.publish("move")
-        print("GOAL FOUNDED")
-        print("Best solution:", best_solution)
-        print("Best distance:", total_cost)
+        if goal in best_solution:
+            idx = best_solution.index(goal)
+            best_solution = remove_loops_from_path(best_solution[:idx+1])
+            total_cost, best_solution = calculate_path_cost(G, best_solution)
+            #move_robot.publish("move")
+            print("GOAL FOUNDED")
+            print("Best solution:", best_solution)
+            print("Best distance:", total_cost)
 
-    edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+        edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-    edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+        edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
-    pos = nx.get_node_attributes(G, 'pos')
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-    plt.show()
+        pos = nx.get_node_attributes(G, 'pos')
+        nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        plt.show()
 
 def calculate_path_cost(graph, path):
     cost = 0  # Initialize the cost to 0
