@@ -223,15 +223,22 @@ files = os.listdir(path_route_planning+"/src/jody_map_creator/maps")
 
 limit = 0
 
+#Clean generated_maps directory
+maps_dir = f'{path_route_planning}/src/jody_map_creator/generated_maps/'
+
+if os.path.exists(maps_dir) and os.path.isdir(maps_dir):
+    shutil.rmtree(maps_dir)
+os.mkdir(maps_dir)
+
 # Loop through the files
 for filename in files:
     filename = re.sub(r'\.map$', '', filename)
     print(filename)
     map_generated = generate_island_map(filename)
     if map_generated:
+        shutil.copy(f'{path_route_planning}/src/jody_map_creator/maps/{filename}.map', f'{path_route_planning}/src/jody_map_creator/generated_maps/')
         limit+=1
-        
-    if limit == 100:
+    if limit == 5:
         break
   
 

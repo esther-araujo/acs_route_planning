@@ -4,14 +4,11 @@ import rospy
 import numpy as np
 from ant import Ant 
 from geometry_msgs.msg import PointStamped
-from std_msgs.msg import String
 from tuw_multi_robot_msgs.msg import Graph
-from  tuw_multi_robot_msgs.msg import Vertex
 import matplotlib.pyplot as plt
 import math
 from scipy.spatial import cKDTree
 import yaml
-import subprocess
 
 # Pasta com o gerador de grafos de voronoi
 path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
