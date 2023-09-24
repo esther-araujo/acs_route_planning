@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-
-<launch>
-    <node name="robot_walking" pkg="acs_route_planning" type="walk.py" output="screen">
-    </node>
-</launch>
