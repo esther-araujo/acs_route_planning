@@ -4,6 +4,7 @@ import rospy
 import numpy as np
 from ant import Ant 
 from geometry_msgs.msg import PointStamped
+from nav_msgs.msg import MapMetaData
 from tuw_multi_robot_msgs.msg import Graph
 import matplotlib.pyplot as plt
 import math
@@ -70,7 +71,9 @@ class AntColonySystem:
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
             pheromone_value = self.pheromone[current_node][node]
-            heuristic_value = 1.0 / self.graph.get_edge_data(current_node, node)['weight'] 
+            curr_x, curr_y = self.graph.nodes[current_node]['pos']
+            node_x, node_y = self.graph.nodes[node]['pos']
+            heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
             probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
@@ -280,6 +283,9 @@ def listener():
     tau_0_local = 0.1
     q0 = 0.5
 
+    map_metadata = rospy.wait_for_message('map_metadata', MapMetaData)
+
+    map_compensation = abs(map_metadata.origin.position.x)
 
     if acs_config != "simulate":
         with open(acs_config, "r") as yaml_file:
@@ -365,7 +371,7 @@ def listener():
                 message = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
                 id_v = v_count if message_count == 0 else (v_count+1)
                 # 8 x 8 do mapa
-                G.add_node(id_v, pos=(message.point.x+8, message.point.y+8))
+                G.add_node(id_v, pos=(message.point.x+map_compensation, message.point.y+map_compensation))
                 
                 kdtree = cKDTree(position_list)
 
@@ -374,7 +380,7 @@ def listener():
                 # Use the find_closest_node_efficient function to find the closest node for each node and create edges
                 closest = find_closest_node_efficient(G, kdtree, node)
                 if closest is not None and closest != node:
-                    G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+8, message.point.y+8, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+                    G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+map_compensation, message.point.y+map_compensation, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
                 message_count += 1
             except rospy.ROSException:

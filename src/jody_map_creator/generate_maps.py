@@ -25,8 +25,8 @@ print("Arquivos .map copiados com sucesso!")
 
 num_maps = 1
 
-map_width = 600
-map_height = 600
+map_width = 500
+map_height = 500
 
 # Cores
 background_color = "white"
@@ -46,7 +46,7 @@ graph_yaml = {
 # map yaml 
 map_yaml = {
     'image': "map.pgm",
-    'resolution': 0.050000,
+    'resolution': 0.06,
     'origin': [-15.000000, -15.000000, 0.000000],
     'negate':0,
     'occupied_thresh': 0.65,
@@ -122,7 +122,6 @@ def generate_island_map(filename):
 
     draw.rectangle([(0, 0), (map_width - 1, map_height - 1)], outline=border_color)
 
-
     rec= {}
 
     obstacles = [] 
@@ -174,10 +173,10 @@ def generate_island_map(filename):
         os.mkdir(f"{path_multi_robot}/cfg/graph/{filename}")
 
     # Normalizing start_point and end_point
-    start_point_x = (start_point["x"] * abs(map_yaml["origin"][0]*2) )/ map_width
-    end_point_x = (end_point["x"] * abs(map_yaml["origin"][0]*2) )/ map_width
-    start_point_y = (start_point["y"] * abs(map_yaml["origin"][0]*2) )/ map_height
-    end_point_y = (end_point["y"] * abs(map_yaml["origin"][0]*2) )/ map_height
+    start_point_x = start_point["x"] * map_yaml["origin"][0]*2 / map_width
+    end_point_x = end_point["x"] * map_yaml["origin"][0]*2/ map_width
+    start_point_y = start_point["y"] * map_yaml["origin"][0]*2/ map_height
+    end_point_y = end_point["y"] * map_yaml["origin"][0]*2/ map_height
 
     # acs config yaml 
     acs_yaml = {
@@ -238,7 +237,7 @@ for filename in files:
     if map_generated:
         shutil.copy(f'{path_route_planning}/src/jody_map_creator/maps/{filename}.map', f'{path_route_planning}/src/jody_map_creator/generated_maps/')
         limit+=1
-    if limit == 5:
+    if limit == 100:
         break
   
 
