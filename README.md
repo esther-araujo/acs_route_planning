@@ -26,7 +26,7 @@ roslaunch acs_route_planning  load_graph.launch room:=room_name
 
 After roslaunch, you have to publish two points to run the ACS: the start point and the end point for the robot
 
-<h4 align="center">
+<h2 align="center">
   <img alt="" width="30%" height="auto" title="#world" src="./images/cave.png"/>
 </h4>
 
@@ -35,7 +35,7 @@ After roslaunch, you have to publish two points to run the ACS: the start point 
 ```bash
 roslaunch acs_route_planning  world.launch world:=world_name
 ```
-<h4 align="center">
+<h2 align="center">
   <img alt="" width="30%" height="auto" title="#world" src="./images/worl_cave.png"/>
 </h4>
 
