@@ -20,6 +20,7 @@ python3 scripts/map_creator/generate_maps.py
 ```bash
 ./tests/test_acs.sh
 ```
+
 ### Launch ACS route planning
 
 ```bash
@@ -37,6 +38,7 @@ After roslaunch, you have to publish two points to run the ACS: the start point 
 ```bash
 roslaunch acs_route_planning  world.launch world:=world_name
 ```
+
 <h1 align="center">
   <img alt="" width="60%" height="auto" src="./images/worl_cave.png"/>
 </h4>
