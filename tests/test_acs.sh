@@ -2,6 +2,7 @@
 
 # Directory containing your files
 directory="/home/esther/catkin_ws/src/acs_route_planning/scripts/jody_map_creator/generated_maps"
+#directory="/home/esther/catkin_ws/src/acs_route_planning/scripts/map_creator/generated_maps"
 
 rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"/*
 
