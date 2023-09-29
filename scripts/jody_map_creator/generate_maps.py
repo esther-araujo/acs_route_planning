@@ -16,7 +16,7 @@ for arquivo in os.listdir(path_jody_maps):
     if arquivo.endswith('.map'):
         # Constrói o caminho completo do arquivo de origem e destino
         caminho_origem = os.path.join(path_jody_maps, arquivo)
-        caminho_destino = os.path.join(path_route_planning+"/src/jody_map_creator/maps", arquivo)
+        caminho_destino = os.path.join(path_route_planning+"/scripts/jody_map_creator/maps", arquivo)
 
         # Copia o arquivo
         shutil.copy(caminho_origem, caminho_destino)
@@ -46,8 +46,8 @@ graph_yaml = {
 # map yaml 
 map_yaml = {
     'image': "map.pgm",
-    'resolution': 0.06,
-    'origin': [-15.000000, -15.000000, 0.000000],
+    'resolution': 0.032,
+    'origin': [-8.000000, -8.000000, 0.000000],
     'negate':0,
     'occupied_thresh': 0.65,
     'free_thresh': 0.196
@@ -55,7 +55,7 @@ map_yaml = {
 limit = 0
 
 # Rviz config
-map_rviz = f"{path_route_planning}/src/map_creator/map.rviz"
+map_rviz = f"{path_route_planning}/scripts/jody_map_creator/map.rviz"
 # Read the .map file
 def parse_map_file(file_path):
 
@@ -114,7 +114,7 @@ def parse_map_file(file_path):
 def generate_island_map(filename):
     
     # Read test infos from .map file
-    rectangles, start_point, end_point, colony = parse_map_file(path_route_planning+"/src/jody_map_creator/maps/"+filename+".map")
+    rectangles, start_point, end_point, colony = parse_map_file(path_route_planning+"/scripts/jody_map_creator/maps/"+filename+".map")
 
     # Create a white background image
     mapa = Image.new("RGB", (map_width, map_height), "white")
@@ -172,11 +172,13 @@ def generate_island_map(filename):
     if not os.path.exists(f"{path_multi_robot}/cfg/graph/{filename}"):
         os.mkdir(f"{path_multi_robot}/cfg/graph/{filename}")
 
+    # mapas de teste estão em cm
+    # 600 cm <-> 6 m
     # Normalizing start_point and end_point
-    start_point_x = start_point["x"] * map_yaml["origin"][0]*2 / map_width
-    end_point_x = end_point["x"] * map_yaml["origin"][0]*2/ map_width
-    start_point_y = start_point["y"] * map_yaml["origin"][0]*2/ map_height
-    end_point_y = end_point["y"] * map_yaml["origin"][0]*2/ map_height
+    start_point_x =  (start_point["x"] / 100) * map_yaml["origin"][0]*2 / 6
+    end_point_x = (end_point["x"]/ 100) * map_yaml["origin"][0]*2/ 6
+    start_point_y = (start_point["y"]/100) * map_yaml["origin"][0]*2/ 6
+    end_point_y = (end_point["y"]/100)* map_yaml["origin"][0]*2/ 6
 
     # acs config yaml 
     acs_yaml = {
@@ -218,12 +220,12 @@ def generate_island_map(filename):
     shutil.copy(map_rviz, rviz_voronoi)
     return True
 
-files = os.listdir(path_route_planning+"/src/jody_map_creator/maps")
+files = os.listdir(path_route_planning+"/scripts/jody_map_creator/maps")
 
 limit = 0
 
 #Clean generated_maps directory
-maps_dir = f'{path_route_planning}/src/jody_map_creator/generated_maps/'
+maps_dir = f'{path_route_planning}/scripts/jody_map_creator/generated_maps/'
 
 if os.path.exists(maps_dir) and os.path.isdir(maps_dir):
     shutil.rmtree(maps_dir)
@@ -235,9 +237,9 @@ for filename in files:
     print(filename)
     map_generated = generate_island_map(filename)
     if map_generated:
-        shutil.copy(f'{path_route_planning}/src/jody_map_creator/maps/{filename}.map', f'{path_route_planning}/src/jody_map_creator/generated_maps/')
+        shutil.copy(f'{path_route_planning}/scripts/jody_map_creator/maps/{filename}.map', f'{path_route_planning}/scripts/jody_map_creator/generated_maps/')
         limit+=1
-    if limit == 100:
+    if limit == 6:
         break
   
 

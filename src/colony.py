@@ -334,8 +334,6 @@ def listener():
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
             # GENERATE LOG FILE
-            
-
             # Specify the directory path where you want to save the file
             log_path = path_route_planning+'/src/acs_logs/'
 
@@ -364,6 +362,14 @@ def listener():
                 print(f"Directory '{log_path}' does not exist.")
             except Exception as e:
                 print(f"An error occurred: {e}")
+            edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+
+            edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+
+            pos = nx.get_node_attributes(G, 'pos')
+            nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+            plt.show()
+
     else:
         while message_count < required_message_count:
             try:

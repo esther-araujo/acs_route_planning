@@ -40,7 +40,7 @@
     </group>
   </group>
 
-  <include file="$(find acs_route_planning)/src/launch/acs_run_test.launch">
+  <include file="$(find acs_route_planning)/launch/acs_run_test.launch">
     <arg name="room" value="$(arg room)" />
   </include>
 

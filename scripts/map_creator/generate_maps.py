@@ -7,7 +7,7 @@ import shutil
 # Pasta com o gerador de grafos de voronoi
 path_multi_robot = "/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo"
 path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
-num_maps = 7
+num_maps = 2
 
 
 map_width = 600
@@ -39,7 +39,7 @@ map = {
 }
 
 # Rviz config
-map_rviz = f"{path_route_planning}/src/map_creator/map.rviz"
+map_rviz = f"{path_route_planning}/scripts/map_creator/map.rviz"
 
 def generate_island_map(width, height, num_obstacles):
     mapa = Image.new("RGB", (width, height), background_color)
