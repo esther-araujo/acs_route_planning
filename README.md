@@ -26,8 +26,8 @@ roslaunch acs_route_planning  load_graph.launch room:=room_name
 
 After roslaunch, you have to publish two points to run the ACS: the start point and the end point for the robot
 
-<h2 align="center">
-  <img alt="" width="30%" height="auto" title="#world" src="./images/cave.png"/>
+<h1 align="center">
+  <img alt="" width="45%" height="auto" src="./images/cave.png"/>
 </h4>
 
 ### Load simulation in Gazebo
@@ -35,8 +35,8 @@ After roslaunch, you have to publish two points to run the ACS: the start point 
 ```bash
 roslaunch acs_route_planning  world.launch world:=world_name
 ```
-<h2 align="center">
-  <img alt="" width="30%" height="auto" title="#world" src="./images/worl_cave.png"/>
+<h1 align="center">
+  <img alt="" width="45%" height="auto" src="./images/worl_cave.png"/>
 </h4>
 
 
