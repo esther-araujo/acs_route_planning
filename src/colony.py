@@ -325,7 +325,12 @@ def listener():
         acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
         best_solution = acs.run()
 
+        goal_founded = False
+        best_solution = remove_loops_from_path(best_solution)
+        total_cost, best_solution = calculate_path_cost(G, best_solution)
+
         if goal in best_solution:
+            goal_founded = True
             idx = best_solution.index(goal)
             best_solution = remove_loops_from_path(best_solution[:idx+1])
             total_cost, best_solution = calculate_path_cost(G, best_solution)
@@ -333,35 +338,7 @@ def listener():
             print("GOAL FOUNDED")
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
-            # GENERATE LOG FILE
-            # Specify the directory path where you want to save the file
-            log_path = path_route_planning+'/src/acs_logs/'
-
-            # Specify the file name and extension
-            log_file = f'{room}.log'
-
-            file_path = log_path + log_file
-
-            # The content you want to write to the file
-            file_content  = {
-                'startNode': start,
-                'endNode': goal,
-                'Ants': num_ants,
-                'Iterations': num_iterations,
-                'Repetitions': num_rep,
-                'distance': total_cost,
-                'nNodesBP': len(best_solution)
-            }   
-
-            # Attempt to create and write to the file
-            try:
-                with open(file_path, 'w') as file:
-                    yaml.dump(file_content, file, default_flow_style=False)
-
-            except FileNotFoundError:
-                print(f"Directory '{log_path}' does not exist.")
-            except Exception as e:
-                print(f"An error occurred: {e}")
+            
             edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
             edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
@@ -369,6 +346,36 @@ def listener():
             pos = nx.get_node_attributes(G, 'pos')
             nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
             plt.show()
+        # GENERATE LOG FILE
+        # Specify the directory path where you want to save the file
+        log_path = path_route_planning+'/tests/acs_logs/'
+
+        # Specify the file name and extension
+        log_file = f'{room}.log'
+
+        file_path = log_path + log_file
+
+        # The content you want to write to the file
+        file_content  = {
+            'goalFounded': goal_founded,
+            'startNode': start,
+            'endNode': goal,
+            'Ants': num_ants,
+            'Iterations': num_iterations,
+            'Repetitions': num_rep,
+            'distance': total_cost,
+            'nNodesBP': len(best_solution)
+        }   
+
+        # Attempt to create and write to the file
+        try:
+            with open(file_path, 'w') as file:
+                yaml.dump(file_content, file, default_flow_style=False)
+
+        except FileNotFoundError:
+            print(f"Directory '{log_path}' does not exist.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     else:
         while message_count < required_message_count:

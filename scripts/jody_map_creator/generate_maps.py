@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw
 import os
+import numpy as np
 import yaml
 import shutil
 import os
@@ -111,6 +112,13 @@ def parse_map_file(file_path):
 
     return rectangles, start_point, end_point, colony
 
+def is_point_inside_obstacle(x, y, obstacles):
+    for obstacle in obstacles:
+        x1, y1, x3, y3 = obstacle
+        if x1 < x < x3 and y1 < y < y3:
+            return True
+    return False
+
 def generate_island_map(filename):
     
     # Read test infos from .map file
@@ -134,16 +142,6 @@ def generate_island_map(filename):
         
     for chave in rec:
         sub_array = rec[chave]
-
-        # Desenhar obstáculo não preenchido
-        # x1,y1,x2,y2 = sub_array[0]
-        # x3,y3,x4,y4 = sub_array[1]
-        # x5,y5,x6,y6 = sub_array[2]
-        # x7,y7,x8,y8 = sub_array[3]
-        # draw.line([(x1, y1), (x2, y2)], fill=obstacle_color)
-        # draw.line([(x3, y3), (x4, y4)], fill=obstacle_color)
-        # draw.line([(x5, y5), (x6, y6)], fill=obstacle_color)
-        # draw.line([(x7, y7), (x8, y8)], fill=obstacle_color)
 
         # Desenhar obstaculo preenchido
         x1,y1,x2,y2 = sub_array[0]
@@ -172,13 +170,22 @@ def generate_island_map(filename):
     if not os.path.exists(f"{path_multi_robot}/cfg/graph/{filename}"):
         os.mkdir(f"{path_multi_robot}/cfg/graph/{filename}")
 
-    # mapas de teste estão em cm
-    # 600 cm <-> 6 m
-    # Normalizing start_point and end_point
-    start_point_x =  (start_point["x"] / 100) * map_yaml["origin"][0]*2 / 6
-    end_point_x = (end_point["x"]/ 100) * map_yaml["origin"][0]*2/ 6
-    start_point_y = (start_point["y"]/100) * map_yaml["origin"][0]*2/ 6
-    end_point_y = (end_point["y"]/100)* map_yaml["origin"][0]*2/ 6
+
+    low = 0  # Lower bound (inclusive)
+    high = 16  # Upper bound (exclusive)
+
+    # Loop para gerar pontos que não colidam com obstáculos
+    while True:
+        start_point_x = np.random.uniform(low, high)
+        start_point_y = np.random.uniform(low, high)
+        end_point_x = np.random.uniform(low, high)
+        end_point_y = np.random.uniform(low, high)
+
+        # Verifica se os pontos gerados colidem com obstáculos
+        if not is_point_inside_obstacle(start_point_x, start_point_y, obstacles) and \
+        not is_point_inside_obstacle(end_point_x, end_point_y, obstacles):
+            break  # Pontos válidos encontrados
+
 
     # acs config yaml 
     acs_yaml = {
@@ -239,7 +246,7 @@ for filename in files:
     if map_generated:
         shutil.copy(f'{path_route_planning}/scripts/jody_map_creator/maps/{filename}.map', f'{path_route_planning}/scripts/jody_map_creator/generated_maps/')
         limit+=1
-    if limit == 6:
+    if limit == 100:
         break
   
 
