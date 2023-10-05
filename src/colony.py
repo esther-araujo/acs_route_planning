@@ -274,7 +274,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 100 # default
-    num_iterations = 70 # default
+    num_iterations = 20 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
@@ -294,8 +294,6 @@ def listener():
             data = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
             # ACS PARAMETERS
-            num_ants = data["num_ants"]
-            num_iterations = data["num_it"]
             num_rep = data["repetitions"]
 
             # START
@@ -324,10 +322,9 @@ def listener():
 
         acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
         best_solution = acs.run()
+        total_cost, best_solution = calculate_path_cost(G, best_solution)
 
         goal_founded = False
-        best_solution = remove_loops_from_path(best_solution)
-        total_cost, best_solution = calculate_path_cost(G, best_solution)
 
         if goal in best_solution:
             goal_founded = True
@@ -339,13 +336,6 @@ def listener():
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
             
-            edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
-
-            edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
-
-            pos = nx.get_node_attributes(G, 'pos')
-            nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-            plt.show()
         # GENERATE LOG FILE
         # Specify the directory path where you want to save the file
         log_path = path_route_planning+'/tests/acs_logs/'
@@ -376,6 +366,7 @@ def listener():
             print(f"Directory '{log_path}' does not exist.")
         except Exception as e:
             print(f"An error occurred: {e}")
+
 
     else:
         while message_count < required_message_count:

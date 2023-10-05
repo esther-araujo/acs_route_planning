@@ -36,12 +36,13 @@ plt.plot(x_values_1, distances_1, marker='o', linestyle='-', label='ACS 1')
 plt.plot(x_values_2, distances_2, marker='s', linestyle='-', label='ACS 2')
 
 plt.xlabel("Map")
-plt.ylabel("Distance")
+plt.ylabel("Distance (m)")
 plt.title("Distance vs. Maps")
 
 # Customize x-axis labels with file names for the first set of files
-plt.xticks(x_values_1, [os.path.basename(filename) for filename in file_names_1], rotation=45, ha="right")
+tick_positions = range(0, len(x_values_1), 10)
 
+plt.xticks(tick_positions, tick_positions, rotation=0)
 # Add a legend
 plt.legend()
 
