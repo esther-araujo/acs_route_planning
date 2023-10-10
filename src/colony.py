@@ -17,7 +17,7 @@ path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
 ants = []
 
 class AntColonySystem:
-    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local):
+    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local, start_x, start_y):
         self.graph = graph
         self.start = start
         self.num_nodes = graph.number_of_nodes()
@@ -28,6 +28,8 @@ class AntColonySystem:
         self.rho = rho
         self.q0 = q0
         self.goal = goal
+        self.start_x = start_x
+        self.start_y = start_y
 
 
         self.rho_local = rho_local
@@ -37,6 +39,9 @@ class AntColonySystem:
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
+        previous_node = current_node
+        if len(ant.visited_nodes) >= 2:
+            previous_node = ant.visited_nodes[-2]
 
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
@@ -73,7 +78,8 @@ class AntColonySystem:
             pheromone_value = self.pheromone[current_node][node]
             curr_x, curr_y = self.graph.nodes[current_node]['pos']
             node_x, node_y = self.graph.nodes[node]['pos']
-            heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
+            prev_x, prev_y = self.graph.nodes[previous_node]['pos']
+            heuristic_value = a_star_heuristic(curr_x, curr_y, node_x, node_y, self.start_x, self.start_y, prev_x, prev_y)
             probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
@@ -236,8 +242,65 @@ def create_nx_graph(vertice):
 
     return G
 
+#distancia euclidiana
 def calculate_edge_weight(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+def calculate_angle(origin_x, origin_y, target_x, target_y):
+    # Calculate the vector from node1 to node2
+    dx = origin_x - target_x
+    dy = origin_y - target_y 
+    # Convert to degrees
+    angle_rad = math.atan2(dy, dx)
+
+    # Ensure the angle is between 0 and 2*pi (360 degrees)
+    if angle_rad < 0:
+        angle_rad += 2 * math.pi
+
+    return angle_rad
+
+def calculate_turns(previous_coords, current_coords, next_coords):
+    # Vetores do anterior pro atual e do atual pro prox
+    vector1 = (current_coords[0] - previous_coords[0], current_coords[1] - previous_coords[1])
+    vector2 = (next_coords[0] - current_coords[0], next_coords[1] - current_coords[1])
+
+    # Angulo entre os vetores
+    angle1_degrees = math.degrees(math.atan2(vector1[1], vector1[0]))
+    angle2_degrees = math.degrees(math.atan2(vector2[1], vector2[0]))
+
+    # Normalização
+    angle1_degrees = (angle1_degrees + 360) % 360
+    angle2_degrees = (angle2_degrees + 360) % 360
+
+    # Diferença entre os angulos
+    angle_difference = abs(angle2_degrees - angle1_degrees)
+
+    # Numero de "turns", sendo uma a cada 45 graus
+    turns = angle_difference // 45
+
+    return turns
+
+
+def original_heuristic(x1, y1, x2, y2):
+    return 1 / (calculate_edge_weight(x1, y1, x2, y2))
+
+def a_star_heuristic(origin_x, origin_y, target_x, target_y, start_x, start_y, prev_x, prev_y):
+    h = math.sqrt((origin_x - target_x)**2 + (origin_y - target_y)**2)
+    g = math.sqrt((origin_x - start_x)**2 + (origin_y - start_y)**2)
+    f = g + h
+
+    fi = 1.0 # corrigir
+    psi = 2.0 # corrigir
+
+    thita = math.degrees(calculate_angle(origin_x, origin_y, target_x, target_y))
+    # Example usage:
+    previous_node = (prev_x, prev_y)  # Replace with the actual coordinates of the previous node
+    current_node = (origin_x, origin_y)   # Replace with the actual coordinates of the current node
+    next_node = (target_x, target_y)      # Replace with the actual coordinates of the next node
+
+    turn = calculate_turns(previous_node, current_node, next_node)
+    cost = (fi * turn) + (psi * thita) # consertar
+    return 1 / (f + cost)
 
 def find_closest_node_efficient(graph, kdtree, target_node):
     position_target = target_node['pos']
@@ -295,6 +358,9 @@ def listener():
 
             # ACS PARAMETERS
             num_rep = data["repetitions"]
+
+            start_x = data["start_point_x"]
+            start_y = data["start_point_y"]
 
             # START
             G.add_node(start, pos=(data["start_point_x"], data["start_point_y"]))
@@ -374,6 +440,9 @@ def listener():
                 # Wait for a message on the desired topic with a timeout
                 message = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
                 id_v = v_count if message_count == 0 else (v_count+1)
+                if message_count == 0:
+                    start_x = message.point.x+map_compensation
+                    start_y = message.point.y+map_compensation
                 # 8 x 8 do mapa
                 G.add_node(id_v, pos=(message.point.x+map_compensation, message.point.y+map_compensation))
                 
@@ -390,7 +459,7 @@ def listener():
             except rospy.ROSException:
                 rospy.logwarn("Timeout waiting for a message.")
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y)
         best_solution = acs.run()
 
         if goal in best_solution:
