@@ -246,40 +246,35 @@ def create_nx_graph(vertice):
 def calculate_edge_weight(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-def calculate_angle(origin_x, origin_y, target_x, target_y):
-    # Calculate the vector from node1 to node2
-    dx = origin_x - target_x
-    dy = origin_y - target_y 
-    # Convert to degrees
-    angle_rad = math.atan2(dy, dx)
+def calculate_angle(prev_x, prev_y, curr_x, curr_y, target_x, target_y):
 
-    # Ensure the angle is between 0 and 2*pi (360 degrees)
-    if angle_rad < 0:
-        angle_rad += 2 * math.pi
+    # Coordinates of points A, B, and C
+    x1, y1 = prev_x, prev_y  # Change these values to your actual coordinates for point A
+    x2, y2 = curr_x, curr_y # Change these values to your actual coordinates for point B
+    x3, y3 = target_x, target_y # Change these values to your actual coordinates for point C
 
-    return angle_rad
+    print(x1, y1)
+    # Calculate vectors AB and BC
+    ABx, ABy = x1 - x2, y1 - y2
+    BCx, BCy = x3 - x2, y3 - y2
 
-def calculate_turns(previous_coords, current_coords, next_coords):
-    # Vetores do anterior pro atual e do atual pro prox
-    vector1 = (current_coords[0] - previous_coords[0], current_coords[1] - previous_coords[1])
-    vector2 = (next_coords[0] - current_coords[0], next_coords[1] - current_coords[1])
+    # Calculate the dot product of AB and BC
+    dot_product = ABx * BCx + ABy * BCy
 
-    # Angulo entre os vetores
-    angle1_degrees = math.degrees(math.atan2(vector1[1], vector1[0]))
-    angle2_degrees = math.degrees(math.atan2(vector2[1], vector2[0]))
+    # Calculate the magnitudes of vectors AB and BC
+    magnitude_AB = math.sqrt(ABx**2 + ABy**2)
+    magnitude_BC = math.sqrt(BCx**2 + BCy**2)
 
-    # Normalização
-    angle1_degrees = (angle1_degrees + 360) % 360
-    angle2_degrees = (angle2_degrees + 360) % 360
+    # Calculate the cosine of the angle at point B
+    cosine_theta = dot_product / (magnitude_AB * magnitude_BC)
 
-    # Diferença entre os angulos
-    angle_difference = abs(angle2_degrees - angle1_degrees)
+    # Calculate the angle in radians
+    theta_radians = math.acos(cosine_theta)
 
-    # Numero de "turns", sendo uma a cada 45 graus
-    turns = angle_difference // 45
+    # Convert the angle to degrees
+    theta_degrees = math.degrees(theta_radians)
 
-    return turns
-
+    return theta_degrees
 
 def original_heuristic(x1, y1, x2, y2):
     return 1 / (calculate_edge_weight(x1, y1, x2, y2))
@@ -292,13 +287,9 @@ def a_star_heuristic(origin_x, origin_y, target_x, target_y, start_x, start_y, p
     fi = 1.0 # corrigir
     psi = 2.0 # corrigir
 
-    thita = math.degrees(calculate_angle(origin_x, origin_y, target_x, target_y))
-    # Example usage:
-    previous_node = (prev_x, prev_y)  # Replace with the actual coordinates of the previous node
-    current_node = (origin_x, origin_y)   # Replace with the actual coordinates of the current node
-    next_node = (target_x, target_y)      # Replace with the actual coordinates of the next node
+    thita = math.degrees(calculate_angle(prev_x, prev_y, origin_x, origin_y, target_x, target_y))  # Replace with the actual coordinates of the next node
 
-    turn = calculate_turns(previous_node, current_node, next_node)
+    turn = thita // 45 # Numero de "turns", sendo uma a cada 45 graus
     cost = (fi * turn) + (psi * thita) # consertar
     return 1 / (f + cost)
 
@@ -386,7 +377,7 @@ def listener():
             if closest is not None and closest != node:
                 G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y)
         best_solution = acs.run()
         total_cost, best_solution = calculate_path_cost(G, best_solution)
 
