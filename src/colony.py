@@ -17,7 +17,7 @@ path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
 ants = []
 
 class AntColonySystem:
-    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local, start_x, start_y):
+    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local, start_x, start_y, goal_x, goal_y):
         self.graph = graph
         self.start = start
         self.num_nodes = graph.number_of_nodes()
@@ -30,6 +30,8 @@ class AntColonySystem:
         self.goal = goal
         self.start_x = start_x
         self.start_y = start_y
+        self.goal_x = goal_x
+        self.goal_y = goal_y
 
 
         self.rho_local = rho_local
@@ -79,7 +81,11 @@ class AntColonySystem:
             curr_x, curr_y = self.graph.nodes[current_node]['pos']
             node_x, node_y = self.graph.nodes[node]['pos']
             prev_x, prev_y = self.graph.nodes[previous_node]['pos']
-            heuristic_value = a_star_heuristic(curr_x, curr_y, node_x, node_y, self.start_x, self.start_y, prev_x, prev_y)
+            if curr_x == prev_x and curr_y == prev_y:
+                heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
+            else:
+                heuristic_value = a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, self.start_x, self.start_y, self.goal_x, self.goal_y)
+
             probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
@@ -253,7 +259,6 @@ def calculate_angle(prev_x, prev_y, curr_x, curr_y, target_x, target_y):
     x2, y2 = curr_x, curr_y # Change these values to your actual coordinates for point B
     x3, y3 = target_x, target_y # Change these values to your actual coordinates for point C
 
-    print(x1, y1)
     # Calculate vectors AB and BC
     ABx, ABy = x1 - x2, y1 - y2
     BCx, BCy = x3 - x2, y3 - y2
@@ -268,28 +273,33 @@ def calculate_angle(prev_x, prev_y, curr_x, curr_y, target_x, target_y):
     # Calculate the cosine of the angle at point B
     cosine_theta = dot_product / (magnitude_AB * magnitude_BC)
 
+    rounded_cosine_theta = round(cosine_theta, 10)
+
     # Calculate the angle in radians
-    theta_radians = math.acos(cosine_theta)
+    theta_radians = math.acos(rounded_cosine_theta)
 
     # Convert the angle to degrees
     theta_degrees = math.degrees(theta_radians)
 
     return theta_degrees
 
+
 def original_heuristic(x1, y1, x2, y2):
     return 1 / (calculate_edge_weight(x1, y1, x2, y2))
 
-def a_star_heuristic(origin_x, origin_y, target_x, target_y, start_x, start_y, prev_x, prev_y):
-    h = math.sqrt((origin_x - target_x)**2 + (origin_y - target_y)**2)
-    g = math.sqrt((origin_x - start_x)**2 + (origin_y - start_y)**2)
+def a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, start_x, start_y, goal_x, goal_y):
+    h = math.sqrt((curr_x - goal_x)**2 + (curr_y - goal_y)**2)
+    g = math.sqrt((curr_x - start_x)**2 + (curr_y - start_y)**2)
     f = g + h
 
-    fi = 1.0 # corrigir
-    psi = 2.0 # corrigir
-
-    thita = math.degrees(calculate_angle(prev_x, prev_y, origin_x, origin_y, target_x, target_y))  # Replace with the actual coordinates of the next node
+    thita = math.degrees(calculate_angle(prev_x, prev_y, curr_x, curr_y, node_x, node_y))  # Replace with the actual coordinates of the next node
 
     turn = thita // 45 # Numero de "turns", sendo uma a cada 45 graus
+    
+    fi = 0.1
+    psi = 0.2
+    
+    
     cost = (fi * turn) + (psi * thita) # consertar
     return 1 / (f + cost)
 
@@ -328,7 +338,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 100 # default
-    num_iterations = 20 # default
+    num_iterations = 30 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
@@ -352,6 +362,8 @@ def listener():
 
             start_x = data["start_point_x"]
             start_y = data["start_point_y"]
+            goal_x = data["end_point_x"]
+            goal_y = data["end_point_y"]
 
             # START
             G.add_node(start, pos=(data["start_point_x"], data["start_point_y"]))
@@ -377,7 +389,7 @@ def listener():
             if closest is not None and closest != node:
                 G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y)
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
         total_cost, best_solution = calculate_path_cost(G, best_solution)
 
@@ -434,7 +446,10 @@ def listener():
                 if message_count == 0:
                     start_x = message.point.x+map_compensation
                     start_y = message.point.y+map_compensation
-                # 8 x 8 do mapa
+                if message_count == 1:
+                    goal_x = message.point.x+map_compensation
+                    goal_y = message.point.y+map_compensation
+                # 16 x 16 do mapa
                 G.add_node(id_v, pos=(message.point.x+map_compensation, message.point.y+map_compensation))
                 
                 kdtree = cKDTree(position_list)
@@ -450,7 +465,7 @@ def listener():
             except rospy.ROSException:
                 rospy.logwarn("Timeout waiting for a message.")
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y)
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
 
         if goal in best_solution:

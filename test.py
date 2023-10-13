@@ -1,9 +1,9 @@
 import math
 
 # Coordinates of points A, B, and C
-x1, y1 = -1.0, 2.0  # Change these values to your actual coordinates for point A
+x1, y1 = 0.0, 2.0  # Change these values to your actual coordinates for point A
 x2, y2 = 0.0, 0.0  # Change these values to your actual coordinates for point B
-x3, y3 = 1.0, 2.0  # Change these values to your actual coordinates for point C
+x3, y3 = 1.0, 0.0  # Change these values to your actual coordinates for point C
 
 # Calculate vectors AB and BC
 ABx, ABy = x1 - x2, y1 - y2
@@ -25,4 +25,4 @@ theta_radians = math.acos(cosine_theta)
 # Convert the angle to degrees
 theta_degrees = math.degrees(theta_radians)
 
-print("Angle at point B (in degrees):", theta_degrees)
+print("Angle at point B (in degrees):", theta_degrees//45)
