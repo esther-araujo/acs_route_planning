@@ -80,11 +80,8 @@ class AntColonySystem:
             pheromone_value = self.pheromone[current_node][node]
             curr_x, curr_y = self.graph.nodes[current_node]['pos']
             node_x, node_y = self.graph.nodes[node]['pos']
-            prev_x, prev_y = self.graph.nodes[previous_node]['pos']
-            if curr_x == prev_x and curr_y == prev_y:
-                heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
-            else:
-                heuristic_value = a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, self.start_x, self.start_y, self.goal_x, self.goal_y)
+            #prev_x, prev_y = self.graph.nodes[previous_node]['pos']
+            heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
 
             probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
@@ -188,10 +185,45 @@ class AntColonySystem:
                 self.construct_solutions(ants)
                 #LocalSearch
                 # .........
-            # Última formiga, saindo do ponto inicial, utilizando as informações prévias
             ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
-            best_solution = self.construct_solutions([ant])
-            return best_solution
+            solution_ph_matrix = [self.start]
+            pheromone = self.pheromone
+            # Trilha com maior quantidade de feromonios
+            while solution_ph_matrix[-1] != self.goal:
+                no_atual = solution_ph_matrix[-1]
+                proximo_no = None
+                max_feromonios = -1  # Inicialize com um valor negativo
+                available_nodes = [node for node in self.graph.neighbors(no_atual)]
+                # Percorra todas as arestas do nó atual
+                for proximo in available_nodes:
+                    if proximo not in solution_ph_matrix and  pheromone[no_atual][proximo] > max_feromonios:
+                        max_feromonios = pheromone[no_atual][proximo]
+                        proximo_no = proximo
+                if proximo_no is not None:
+                    solution_ph_matrix.append(proximo_no)
+                    edge = self.graph.get_edge_data(no_atual, proximo_no)
+                    ant.visit(proximo_no, edge)
+                else:
+                    break
+            cost_ph_matrix = ant.get_total_distance()
+
+            # Última formiga, saindo do ponto inicial, utilizando as informações prévias
+            ant.reset(self.start)
+
+            solution_last_ant = self.construct_solutions([ant])
+            cost_last_ant = ant.get_total_distance()
+            
+            # retorna qual estrategia achou a menor solução
+            if self.goal in solution_last_ant and self.goal in solution_ph_matrix:
+                result = solution_last_ant if cost_last_ant < cost_ph_matrix else cost_ph_matrix
+            elif self.goal in solution_last_ant:
+                result = solution_last_ant
+            elif self.goal in solution_ph_matrix:
+                result = solution_ph_matrix
+            else:
+                result = solution_ph_matrix
+            
+            return result
 
 def xml_to_dict(input_data):
     message_list = []
@@ -296,7 +328,7 @@ def a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, start_x, st
 
     turn = thita // 45 # Numero de "turns", sendo uma a cada 45 graus
     
-    fi = 0.1
+    fi = 0.45
     psi = 0.2
     
     
@@ -435,7 +467,6 @@ def listener():
             print(f"Directory '{log_path}' does not exist.")
         except Exception as e:
             print(f"An error occurred: {e}")
-
 
     else:
         while message_count < required_message_count:
