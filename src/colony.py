@@ -370,7 +370,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 100 # default
-    num_iterations = 30 # default
+    num_iterations = 10 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
