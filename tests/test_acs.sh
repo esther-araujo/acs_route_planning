@@ -8,7 +8,7 @@ rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"/*
 
 log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"
 
-BAR='#####################################################################################################' 
+BAR='####################################################################################################' 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
