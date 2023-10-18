@@ -12,7 +12,7 @@ This package contains an implementation of Ant Colony System for Path Planning
 ### Generate maps for tests
 
 ```bash
-python3 scripts/map_creator/generate_maps.py 
+python3 scripts/jody_map_creator/generate_maps.py 
 ```
 
 ### Run tests for ACS algorithm
@@ -20,6 +20,7 @@ python3 scripts/map_creator/generate_maps.py
 ```bash
 ./tests/test_acs.sh
 ```
+This will run the test enviroment, using the generated maps (in scripts/jody_map_creator/generated_maps), and the tuw_voronoi_graph package
 
 ### Launch ACS route planning
 

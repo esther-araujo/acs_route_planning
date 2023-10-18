@@ -80,8 +80,11 @@ class AntColonySystem:
             pheromone_value = self.pheromone[current_node][node]
             curr_x, curr_y = self.graph.nodes[current_node]['pos']
             node_x, node_y = self.graph.nodes[node]['pos']
-            #prev_x, prev_y = self.graph.nodes[previous_node]['pos']
-            heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
+            prev_x, prev_y = self.graph.nodes[previous_node]['pos']
+            if curr_x == prev_x and curr_y == prev_y:
+                heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
+            else:
+                heuristic_value = a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, self.start_x, self.start_y, self.goal_x, self.goal_y)
 
             probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
@@ -328,8 +331,13 @@ def a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, start_x, st
 
     turn = thita // 45 # Numero de "turns", sendo uma a cada 45 graus
     
-    fi = 0.45
-    psi = 0.2
+    #(16/256)/8
+    fi = 0.0078125
+    #(16/256)/360
+    psi = 0.000173611
+    # fi = 2
+    # #(16/256)/360
+    # psi = 0.044
     
     
     cost = (fi * turn) + (psi * thita) # consertar
@@ -370,7 +378,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 100 # default
-    num_iterations = 10 # default
+    num_iterations = 30 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
