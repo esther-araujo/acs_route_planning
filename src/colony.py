@@ -38,6 +38,8 @@ class AntColonySystem:
         self.tau_0_local = tau_0_local
         
         self.pheromone = np.ones((self.num_nodes, self.num_nodes))
+
+        self.forbidden_nodes = set()
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
@@ -45,6 +47,7 @@ class AntColonySystem:
         if len(ant.visited_nodes) >= 2:
             previous_node = ant.visited_nodes[-2]
 
+        forbidden_aux = set()
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
 
@@ -52,17 +55,24 @@ class AntColonySystem:
         # caminho que leva ao mínimo local
         if len(available_nodes) == 1 and current_node is not self.start:
             pre = ant.visited_nodes[len(ant.visited_nodes)-2]
-            for curr in reversed(ant.visited_nodes[:-1]):
+            visited = ant.visited_nodes[:-1]
+            curr_neigh = [node for node in self.graph.neighbors(pre)]
+            if len(curr_neigh)<=2:
+                forbidden_aux.add(pre)
+            for curr in reversed(visited):
                 # remove pheromone
-                self.remove_pheromone(curr, pre)
+                self.remove_pheromone(curr, pre)                
                 available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
+                ant.visited_nodes.append(curr)
+                #É necessário atualizar o current da caminhada
                 current_node = curr
-                ant.visited_nodes.append(current_node)
                 if len(available_nodes) > 2:
                     available_nodes = available_nodes = [node for node in self.graph.neighbors(curr) if node is not self.start]
-                    break 
+                    break
+                forbidden_aux.add(curr)
                 pre = curr
-                
+
+        self.forbidden_nodes = self.forbidden_nodes.union(forbidden_aux)
         # Force ant to go to new nodes if its possible
         if len(available_nodes) > 1:
             unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
@@ -74,19 +84,17 @@ class AntColonySystem:
 
         if self.goal in available_nodes:
             return self.goal
-        
+
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
-            pheromone_value = self.pheromone[current_node][node]
-            curr_x, curr_y = self.graph.nodes[current_node]['pos']
-            node_x, node_y = self.graph.nodes[node]['pos']
-            prev_x, prev_y = self.graph.nodes[previous_node]['pos']
-            if curr_x == prev_x and curr_y == prev_y:
-                heuristic_value = 1.0 / calculate_edge_weight(curr_x, curr_y, node_x, node_y)
+            if node in self.forbidden_nodes:
+                probability = 0.0
             else:
-                heuristic_value = a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, self.start_x, self.start_y, self.goal_x, self.goal_y)
-
-            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
+                pheromone_value = self.pheromone[current_node][node]
+                curr_x, curr_y = self.graph.nodes[current_node]['pos']
+                node_x, node_y = self.graph.nodes[node]['pos']
+                heuristic_value = original_heuristic(self.goal_x, self.goal_y, node_x, node_y)
+                probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
         
@@ -378,7 +386,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 100 # default
-    num_iterations = 30 # default
+    num_iterations = 10 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
