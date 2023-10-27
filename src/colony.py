@@ -43,9 +43,6 @@ class AntColonySystem:
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
-        previous_node = current_node
-        if len(ant.visited_nodes) >= 2:
-            previous_node = ant.visited_nodes[-2]
 
         forbidden_aux = set()
         # Get available nodes
@@ -56,9 +53,7 @@ class AntColonySystem:
         if len(available_nodes) == 1 and current_node is not self.start:
             pre = ant.visited_nodes[len(ant.visited_nodes)-2]
             visited = ant.visited_nodes[:-1]
-            curr_neigh = [node for node in self.graph.neighbors(pre)]
-            if len(curr_neigh)<=2:
-                forbidden_aux.add(pre)
+            forbidden_aux.add(current_node)
             for curr in reversed(visited):
                 # remove pheromone
                 self.remove_pheromone(curr, pre)                
@@ -71,6 +66,11 @@ class AntColonySystem:
                     break
                 forbidden_aux.add(curr)
                 pre = curr
+
+        if self.goal in forbidden_aux:
+            forbidden_aux.remove(self.goal)
+        if self.start in forbidden_aux:
+            forbidden_aux.remove(self.start)
 
         self.forbidden_nodes = self.forbidden_nodes.union(forbidden_aux)
         # Force ant to go to new nodes if its possible
@@ -93,7 +93,7 @@ class AntColonySystem:
                 pheromone_value = self.pheromone[current_node][node]
                 curr_x, curr_y = self.graph.nodes[current_node]['pos']
                 node_x, node_y = self.graph.nodes[node]['pos']
-                heuristic_value = original_heuristic(self.goal_x, self.goal_y, node_x, node_y)
+                heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
                 probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
@@ -177,7 +177,9 @@ class AntColonySystem:
 
             self.update_pheromone(ants_done_tour)
             # Reset ant for the next iteration
-            ant.reset(np.random.choice(self.num_nodes))
+            random_nodes = [x for x in range(0, self.goal+1) if x not in self.forbidden_nodes]
+            ant.reset(np.random.choice(random_nodes))
+        #print(self.forbidden_nodes)
         return best_solution
         
     def run(self):
@@ -185,7 +187,8 @@ class AntColonySystem:
             ants = []
 
             for _ in range(self.num_ants):
-                start_node = np.random.randint(self.num_nodes)
+                random_nodes = [x for x in range(0, self.goal+1) if x not in self.forbidden_nodes]
+                start_node = np.random.choice(random_nodes)
                 ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
                 ants.append(ant)
 
@@ -295,61 +298,8 @@ def create_nx_graph(vertice):
 def calculate_edge_weight(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-def calculate_angle(prev_x, prev_y, curr_x, curr_y, target_x, target_y):
-
-    # Coordinates of points A, B, and C
-    x1, y1 = prev_x, prev_y  # Change these values to your actual coordinates for point A
-    x2, y2 = curr_x, curr_y # Change these values to your actual coordinates for point B
-    x3, y3 = target_x, target_y # Change these values to your actual coordinates for point C
-
-    # Calculate vectors AB and BC
-    ABx, ABy = x1 - x2, y1 - y2
-    BCx, BCy = x3 - x2, y3 - y2
-
-    # Calculate the dot product of AB and BC
-    dot_product = ABx * BCx + ABy * BCy
-
-    # Calculate the magnitudes of vectors AB and BC
-    magnitude_AB = math.sqrt(ABx**2 + ABy**2)
-    magnitude_BC = math.sqrt(BCx**2 + BCy**2)
-
-    # Calculate the cosine of the angle at point B
-    cosine_theta = dot_product / (magnitude_AB * magnitude_BC)
-
-    rounded_cosine_theta = round(cosine_theta, 10)
-
-    # Calculate the angle in radians
-    theta_radians = math.acos(rounded_cosine_theta)
-
-    # Convert the angle to degrees
-    theta_degrees = math.degrees(theta_radians)
-
-    return theta_degrees
-
-
 def original_heuristic(x1, y1, x2, y2):
     return 1 / (calculate_edge_weight(x1, y1, x2, y2))
-
-def a_star_heuristic(prev_x, prev_y, curr_x, curr_y, node_x, node_y, start_x, start_y, goal_x, goal_y):
-    h = math.sqrt((curr_x - goal_x)**2 + (curr_y - goal_y)**2)
-    g = math.sqrt((curr_x - start_x)**2 + (curr_y - start_y)**2)
-    f = g + h
-
-    thita = math.degrees(calculate_angle(prev_x, prev_y, curr_x, curr_y, node_x, node_y))  # Replace with the actual coordinates of the next node
-
-    turn = thita // 45 # Numero de "turns", sendo uma a cada 45 graus
-    
-    #(16/256)/8
-    fi = 0.0078125
-    #(16/256)/360
-    psi = 0.000173611
-    # fi = 2
-    # #(16/256)/360
-    # psi = 0.044
-    
-    
-    cost = (fi * turn) + (psi * thita) # consertar
-    return 1 / (f + cost)
 
 def find_closest_node_efficient(graph, kdtree, target_node):
     position_target = target_node['pos']
@@ -385,15 +335,15 @@ def listener():
 
     start = v_count
     goal = v_count + 1
-    num_ants = 100 # default
-    num_iterations = 10 # default
+    num_ants = 50 # default
+    num_iterations = 2 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
     rho = 0.1
     rho_local = 0.1
     tau_0_local = 0.1
-    q0 = 0.5
+    q0 = 0.1
 
     map_metadata = rospy.wait_for_message('map_metadata', MapMetaData)
 
@@ -483,6 +433,14 @@ def listener():
             print(f"Directory '{log_path}' does not exist.")
         except Exception as e:
             print(f"An error occurred: {e}")
+
+        # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+
+        # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+
+        # pos = nx.get_node_attributes(G, 'pos')
+        # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        # plt.show()
 
     else:
         while message_count < required_message_count:
