@@ -17,7 +17,7 @@ path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
 ants = []
 
 class AntColonySystem:
-    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local, start_x, start_y):
+    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local, start_x, start_y, goal_x, goal_y):
         self.graph = graph
         self.start = start
         self.num_nodes = graph.number_of_nodes()
@@ -30,19 +30,21 @@ class AntColonySystem:
         self.goal = goal
         self.start_x = start_x
         self.start_y = start_y
+        self.goal_x = goal_x
+        self.goal_y = goal_y
 
 
         self.rho_local = rho_local
         self.tau_0_local = tau_0_local
         
         self.pheromone = np.ones((self.num_nodes, self.num_nodes))
+
+        self.forbidden_nodes = set()
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
-        previous_node = current_node
-        if len(ant.visited_nodes) >= 2:
-            previous_node = ant.visited_nodes[-2]
 
+        forbidden_aux = set()
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
 
@@ -50,17 +52,27 @@ class AntColonySystem:
         # caminho que leva ao mínimo local
         if len(available_nodes) == 1 and current_node is not self.start:
             pre = ant.visited_nodes[len(ant.visited_nodes)-2]
-            for curr in reversed(ant.visited_nodes[:-1]):
+            visited = ant.visited_nodes[:-1]
+            forbidden_aux.add(current_node)
+            for curr in reversed(visited):
                 # remove pheromone
-                self.remove_pheromone(curr, pre)
+                self.remove_pheromone(curr, pre)                
                 available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
+                ant.visited_nodes.append(curr)
+                #É necessário atualizar o current da caminhada
                 current_node = curr
-                ant.visited_nodes.append(current_node)
                 if len(available_nodes) > 2:
                     available_nodes = available_nodes = [node for node in self.graph.neighbors(curr) if node is not self.start]
-                    break 
+                    break
+                forbidden_aux.add(curr)
                 pre = curr
-                
+
+        if self.goal in forbidden_aux:
+            forbidden_aux.remove(self.goal)
+        if self.start in forbidden_aux:
+            forbidden_aux.remove(self.start)
+
+        self.forbidden_nodes = self.forbidden_nodes.union(forbidden_aux)
         # Force ant to go to new nodes if its possible
         if len(available_nodes) > 1:
             unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
@@ -72,15 +84,17 @@ class AntColonySystem:
 
         if self.goal in available_nodes:
             return self.goal
-        
+
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
-            pheromone_value = self.pheromone[current_node][node]
-            curr_x, curr_y = self.graph.nodes[current_node]['pos']
-            node_x, node_y = self.graph.nodes[node]['pos']
-            prev_x, prev_y = self.graph.nodes[previous_node]['pos']
-            heuristic_value = a_star_heuristic(curr_x, curr_y, node_x, node_y, self.start_x, self.start_y, prev_x, prev_y)
-            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
+            if node in self.forbidden_nodes:
+                probability = 0.0
+            else:
+                pheromone_value = self.pheromone[current_node][node]
+                curr_x, curr_y = self.graph.nodes[current_node]['pos']
+                node_x, node_y = self.graph.nodes[node]['pos']
+                heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
+                probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
         
@@ -163,7 +177,9 @@ class AntColonySystem:
 
             self.update_pheromone(ants_done_tour)
             # Reset ant for the next iteration
-            ant.reset(np.random.choice(self.num_nodes))
+            random_nodes = [x for x in range(0, self.goal+1) if x not in self.forbidden_nodes]
+            ant.reset(np.random.choice(random_nodes))
+        #print(self.forbidden_nodes)
         return best_solution
         
     def run(self):
@@ -171,7 +187,8 @@ class AntColonySystem:
             ants = []
 
             for _ in range(self.num_ants):
-                start_node = np.random.randint(self.num_nodes)
+                random_nodes = [x for x in range(0, self.goal+1) if x not in self.forbidden_nodes]
+                start_node = np.random.choice(random_nodes)
                 ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
                 ants.append(ant)
 
@@ -182,10 +199,45 @@ class AntColonySystem:
                 self.construct_solutions(ants)
                 #LocalSearch
                 # .........
-            # Última formiga, saindo do ponto inicial, utilizando as informações prévias
             ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
-            best_solution = self.construct_solutions([ant])
-            return best_solution
+            solution_ph_matrix = [self.start]
+            pheromone = self.pheromone
+            # Trilha com maior quantidade de feromonios
+            while solution_ph_matrix[-1] != self.goal:
+                no_atual = solution_ph_matrix[-1]
+                proximo_no = None
+                max_feromonios = -1  # Inicialize com um valor negativo
+                available_nodes = [node for node in self.graph.neighbors(no_atual)]
+                # Percorra todas as arestas do nó atual
+                for proximo in available_nodes:
+                    if proximo not in solution_ph_matrix and  pheromone[no_atual][proximo] > max_feromonios:
+                        max_feromonios = pheromone[no_atual][proximo]
+                        proximo_no = proximo
+                if proximo_no is not None:
+                    solution_ph_matrix.append(proximo_no)
+                    edge = self.graph.get_edge_data(no_atual, proximo_no)
+                    ant.visit(proximo_no, edge)
+                else:
+                    break
+            cost_ph_matrix = ant.get_total_distance()
+
+            # Última formiga, saindo do ponto inicial, utilizando as informações prévias
+            ant.reset(self.start)
+
+            solution_last_ant = self.construct_solutions([ant])
+            cost_last_ant = ant.get_total_distance()
+            
+            # retorna qual estrategia achou a menor solução
+            if self.goal in solution_last_ant and self.goal in solution_ph_matrix:
+                result = solution_last_ant if cost_last_ant < cost_ph_matrix else cost_ph_matrix
+            elif self.goal in solution_last_ant:
+                result = solution_last_ant
+            elif self.goal in solution_ph_matrix:
+                result = solution_ph_matrix
+            else:
+                result = solution_ph_matrix
+            
+            return result
 
 def xml_to_dict(input_data):
     message_list = []
@@ -246,61 +298,40 @@ def create_nx_graph(vertice):
 def calculate_edge_weight(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-def calculate_angle(origin_x, origin_y, target_x, target_y):
-    # Calculate the vector from node1 to node2
-    dx = origin_x - target_x
-    dy = origin_y - target_y 
-    # Convert to degrees
-    angle_rad = math.atan2(dy, dx)
+def calculate_angle(prev_x, prev_y, curr_x, curr_y, target_x, target_y):
 
-    # Ensure the angle is between 0 and 2*pi (360 degrees)
-    if angle_rad < 0:
-        angle_rad += 2 * math.pi
+    # Coordinates of points A, B, and C
+    x1, y1 = prev_x, prev_y  # Change these values to your actual coordinates for point A
+    x2, y2 = curr_x, curr_y # Change these values to your actual coordinates for point B
+    x3, y3 = target_x, target_y # Change these values to your actual coordinates for point C
 
-    return angle_rad
+    # Calculate vectors AB and BC
+    ABx, ABy = x1 - x2, y1 - y2
+    BCx, BCy = x3 - x2, y3 - y2
 
-def calculate_turns(previous_coords, current_coords, next_coords):
-    # Vetores do anterior pro atual e do atual pro prox
-    vector1 = (current_coords[0] - previous_coords[0], current_coords[1] - previous_coords[1])
-    vector2 = (next_coords[0] - current_coords[0], next_coords[1] - current_coords[1])
+    # Calculate the dot product of AB and BC
+    dot_product = ABx * BCx + ABy * BCy
 
-    # Angulo entre os vetores
-    angle1_degrees = math.degrees(math.atan2(vector1[1], vector1[0]))
-    angle2_degrees = math.degrees(math.atan2(vector2[1], vector2[0]))
+    # Calculate the magnitudes of vectors AB and BC
+    magnitude_AB = math.sqrt(ABx**2 + ABy**2)
+    magnitude_BC = math.sqrt(BCx**2 + BCy**2)
 
-    # Normalização
-    angle1_degrees = (angle1_degrees + 360) % 360
-    angle2_degrees = (angle2_degrees + 360) % 360
+    # Calculate the cosine of the angle at point B
+    cosine_theta = dot_product / (magnitude_AB * magnitude_BC)
 
-    # Diferença entre os angulos
-    angle_difference = abs(angle2_degrees - angle1_degrees)
+    rounded_cosine_theta = round(cosine_theta, 10)
 
-    # Numero de "turns", sendo uma a cada 45 graus
-    turns = angle_difference // 45
+    # Calculate the angle in radians
+    theta_radians = math.acos(rounded_cosine_theta)
 
-    return turns
+    # Convert the angle to degrees
+    theta_degrees = math.degrees(theta_radians)
+
+    return theta_degrees
 
 
 def original_heuristic(x1, y1, x2, y2):
     return 1 / (calculate_edge_weight(x1, y1, x2, y2))
-
-def a_star_heuristic(origin_x, origin_y, target_x, target_y, start_x, start_y, prev_x, prev_y):
-    h = math.sqrt((origin_x - target_x)**2 + (origin_y - target_y)**2)
-    g = math.sqrt((origin_x - start_x)**2 + (origin_y - start_y)**2)
-    f = g + h
-
-    fi = 1.0 # corrigir
-    psi = 2.0 # corrigir
-
-    thita = math.degrees(calculate_angle(origin_x, origin_y, target_x, target_y))
-    # Example usage:
-    previous_node = (prev_x, prev_y)  # Replace with the actual coordinates of the previous node
-    current_node = (origin_x, origin_y)   # Replace with the actual coordinates of the current node
-    next_node = (target_x, target_y)      # Replace with the actual coordinates of the next node
-
-    turn = calculate_turns(previous_node, current_node, next_node)
-    cost = (fi * turn) + (psi * thita) # consertar
-    return 1 / (f + cost)
 
 def find_closest_node_efficient(graph, kdtree, target_node):
     position_target = target_node['pos']
@@ -361,6 +392,8 @@ def listener():
 
             start_x = data["start_point_x"]
             start_y = data["start_point_y"]
+            goal_x = data["end_point_x"]
+            goal_y = data["end_point_y"]
 
             # START
             G.add_node(start, pos=(data["start_point_x"], data["start_point_y"]))
@@ -386,7 +419,7 @@ def listener():
             if closest is not None and closest != node:
                 G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local)
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
         total_cost, best_solution = calculate_path_cost(G, best_solution)
 
@@ -433,6 +466,13 @@ def listener():
         except Exception as e:
             print(f"An error occurred: {e}")
 
+        # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+
+        # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+
+        # pos = nx.get_node_attributes(G, 'pos')
+        # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        # plt.show()
 
     else:
         while message_count < required_message_count:
@@ -443,7 +483,10 @@ def listener():
                 if message_count == 0:
                     start_x = message.point.x+map_compensation
                     start_y = message.point.y+map_compensation
-                # 8 x 8 do mapa
+                if message_count == 1:
+                    goal_x = message.point.x+map_compensation
+                    goal_y = message.point.y+map_compensation
+                # 16 x 16 do mapa
                 G.add_node(id_v, pos=(message.point.x+map_compensation, message.point.y+map_compensation))
                 
                 kdtree = cKDTree(position_list)
@@ -459,7 +502,7 @@ def listener():
             except rospy.ROSException:
                 rospy.logwarn("Timeout waiting for a message.")
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y)
+        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
 
         if goal in best_solution:
