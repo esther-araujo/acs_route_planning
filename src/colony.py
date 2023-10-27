@@ -56,7 +56,7 @@ class AntColonySystem:
             forbidden_aux.add(current_node)
             for curr in reversed(visited):
                 # remove pheromone
-                self.remove_pheromone(curr, pre)                
+                #self.remove_pheromone(curr, pre)                
                 available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
                 ant.visited_nodes.append(curr)
                 #É necessário atualizar o current da caminhada
@@ -100,49 +100,59 @@ class AntColonySystem:
         
         # Normalize probabilities
         epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
-        probabilities = [prob / (total_prob + epsilon) for prob in probabilities]
+        probabilities_exploit = probabilities
+        probabilities_explore = [prob / (total_prob + epsilon) for prob in probabilities]
         
         # Choose the next node based on the ACS probability formula
         random_value = np.random.rand()
 
-        if random_value < self.q0:
-            next_node = available_nodes[np.argmax(probabilities)]
+        # print("RANDOM Q", random_value)
+        if random_value <= self.q0:
+            # print("ARGMAX CHOICE")
+            next_node = available_nodes[np.argmax(probabilities_exploit)]
         else:
-            roulette_wheel = np.cumsum(probabilities)
-            max_cumulative_prob = roulette_wheel[-1]
-            
-            # Adjust random_value if it's very close to or slightly above 1
-            if random_value >= max_cumulative_prob:
-                random_value = max_cumulative_prob - 1e-10  # Adjust to ensure it's within range
-            
-            next_node_index = np.searchsorted(roulette_wheel, random_value)
-            
-            # Handle index out of range error
-            if next_node_index >= len(available_nodes):
-                next_node = available_nodes[-1]  # Choose the last unvisited node
-            else:
-                next_node = available_nodes[next_node_index]
+            random_number = np.random.rand() 
+            # print("PIJ CHOICE -  RANDOM:", random_number)
+            cumulative_prob = 0
+            next_node = available_nodes[-1]
+            for i, element in enumerate(probabilities_explore):
+                cumulative_prob += element
+                if random_number <= cumulative_prob:
+                    # print("CUMULATIVE",cumulative_prob)
+                    # print("CURRENT", current_node)
+                    # print("AVAILABLE",available_nodes)
+                    # print("PROBABILITIES",probabilities_explore)
+                    # print("INDEX CHOICE", i)
+                    next_node = available_nodes[i]
         
         return next_node
 
     # Ant Colony System - Pheromone is only update by the successfull ants
-    def update_pheromone(self, ants):
+    def global_pheromone_update(self, ants, best_solution):
         #Evaporate
         self.evaporate_pheromones()
         # pheromone update based on successful ants
         for ant in ants:
-            tour_length = ant.total_distance
-            epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
-            # Calculate the amount of pheromone to deposit on each edge
-            pheromone_deposit = self.q0 / (tour_length+epsilon)
-            for i in range(len(ant.visited_nodes) - 1):
-                self.pheromone[(ant.visited_nodes[i], ant.visited_nodes[i + 1])] += pheromone_deposit
- 
+            for node in range(len(ant.visited_nodes) - 1):
+                i = ant.visited_nodes[node]
+                j = ant.visited_nodes[node + 1]
+                i_best = best_solution[node]
+                j_best = best_solution[node + 1]
+                if self.has_i_to_j_sequence(best_solution, i, j):
+                    self.pheromone[i, j] = self.rho * self.pheromone[i, j] + self.rho * self.pheromone[i_best, j_best]
+                    self.pheromone[j, i] = self.pheromone[i, j]
 
+
+    def has_i_to_j_sequence(self, arr, i, j):
+        # Testa se i e j estão no array e se estão em sequencia
+        if i in arr and j in arr and (abs(arr.index(i) - arr.index(j)) == 1):
+            return True
+        return False
+    
     # Local Pheromone Update for ACS
     def local_pheromone_update(self, from_node, to_node):
         self.pheromone[from_node][to_node] = (1-self.rho_local)*self.pheromone[from_node][to_node]+(self.rho_local*self.tau_0_local)
-        self.pheromone[to_node][from_node] = (1-self.rho_local)*self.pheromone[from_node][to_node]+(self.rho_local*self.tau_0_local)
+        self.pheromone[to_node][from_node] = self.pheromone[from_node][to_node]
     
     def remove_pheromone(self, from_node, to_node):
         self.pheromone[from_node][to_node] = 0.0
@@ -157,7 +167,7 @@ class AntColonySystem:
         best_distance = float('inf')
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes * 2
+        max_steps = self.num_nodes * 3
         ants_done_tour = []
         # Perform ant tours and update pheromones
         for ant in ants:
@@ -167,15 +177,12 @@ class AntColonySystem:
                 edge = self.graph.get_edge_data(curr_node, next_node)
                 ant.visit(next_node, edge)
                 ant.steps = ant.steps + 1
-                self.local_pheromone_update(curr_node, next_node)
                 if next_node == ant.target_node:
                     ants_done_tour.append(ant)
-                    
-            if ant.total_distance < best_distance:
+                self.local_pheromone_update(curr_node, next_node)
+            if ant.total_distance < best_distance and self.goal in ant.visited_nodes:
                 best_solution = ant.get_visited_nodes()
                 best_distance = ant.get_total_distance()
-
-            self.update_pheromone(ants_done_tour)
             # Reset ant for the next iteration
             random_nodes = [x for x in range(0, self.goal+1) if x not in self.forbidden_nodes]
             ant.reset(np.random.choice(random_nodes))
@@ -187,8 +194,7 @@ class AntColonySystem:
             ants = []
 
             for _ in range(self.num_ants):
-                random_nodes = [x for x in range(0, self.goal+1) if x not in self.forbidden_nodes]
-                start_node = np.random.choice(random_nodes)
+                start_node = np.random.randint(0, self.goal+1)
                 ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
                 ants.append(ant)
 
@@ -319,9 +325,6 @@ def listener():
 
     room = rospy.get_param("~room", "cave")  # Default cave if there is room param
 
-
-    #move_robot = rospy.Publisher('/move_robot', String, queue_size=10)
-
     graph_data = rospy.wait_for_message('segments', Graph)
 
     G = create_nx_graph(graph_data.vertices)
@@ -336,14 +339,14 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 50 # default
-    num_iterations = 2 # default
+    num_iterations = 10 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
     rho = 0.1
     rho_local = 0.1
-    tau_0_local = 0.1
-    q0 = 0.1
+    tau_0_local = 1
+    q0 = 0.5
 
     map_metadata = rospy.wait_for_message('map_metadata', MapMetaData)
 
