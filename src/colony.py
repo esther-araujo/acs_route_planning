@@ -56,7 +56,7 @@ class AntColonySystem:
             forbidden_aux.add(current_node)
             for curr in reversed(visited):
                 # remove pheromone
-                #self.remove_pheromone(curr, pre)                
+                self.remove_pheromone(curr, pre)                
                 available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
                 ant.visited_nodes.append(curr)
                 #É necessário atualizar o current da caminhada
@@ -106,42 +106,33 @@ class AntColonySystem:
         # Choose the next node based on the ACS probability formula
         random_value = np.random.rand()
 
-        # print("RANDOM Q", random_value)
         if random_value <= self.q0:
-            # print("ARGMAX CHOICE")
             next_node = available_nodes[np.argmax(probabilities_exploit)]
         else:
             random_number = np.random.rand() 
-            # print("PIJ CHOICE -  RANDOM:", random_number)
             cumulative_prob = 0
             next_node = available_nodes[-1]
             for i, element in enumerate(probabilities_explore):
                 cumulative_prob += element
                 if random_number <= cumulative_prob:
-                    # print("CUMULATIVE",cumulative_prob)
-                    # print("CURRENT", current_node)
-                    # print("AVAILABLE",available_nodes)
-                    # print("PROBABILITIES",probabilities_explore)
-                    # print("INDEX CHOICE", i)
                     next_node = available_nodes[i]
         
         return next_node
 
     # Ant Colony System - Pheromone is only update by the successfull ants
-    def global_pheromone_update(self, ants, best_solution):
+    def global_pheromone_update(self, ants, best_ant):
         #Evaporate
         self.evaporate_pheromones()
         # pheromone update based on successful ants
         for ant in ants:
+            epsilon = 1e-10
+            delta_tau = 1/(best_ant.total_distance+epsilon)
             for node in range(len(ant.visited_nodes) - 1):
                 i = ant.visited_nodes[node]
                 j = ant.visited_nodes[node + 1]
-                i_best = best_solution[node]
-                j_best = best_solution[node + 1]
-                if self.has_i_to_j_sequence(best_solution, i, j):
-                    self.pheromone[i, j] = self.rho * self.pheromone[i, j] + self.rho * self.pheromone[i_best, j_best]
+                if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
+                    self.pheromone[i, j] = self.rho * self.pheromone[i, j] + (self.rho * delta_tau)
                     self.pheromone[j, i] = self.pheromone[i, j]
-
 
     def has_i_to_j_sequence(self, arr, i, j):
         # Testa se i e j estão no array e se estão em sequencia
@@ -169,6 +160,7 @@ class AntColonySystem:
         # Máximo de passos do tour de cada formiga
         max_steps = self.num_nodes * 3
         ants_done_tour = []
+        best_ant = []
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.steps < max_steps:
@@ -183,18 +175,19 @@ class AntColonySystem:
             if ant.total_distance < best_distance and self.goal in ant.visited_nodes:
                 best_solution = ant.get_visited_nodes()
                 best_distance = ant.get_total_distance()
-            # Reset ant for the next iteration
-            random_nodes = [x for x in range(0, self.goal+1) if x not in self.forbidden_nodes]
-            ant.reset(np.random.choice(random_nodes))
-        #print(self.forbidden_nodes)
-        return best_solution
+                best_ant = ant
+            
+        self.global_pheromone_update(ants_done_tour, best_ant)
+        return best_solution, best_distance
         
     def run(self):
             #InitializeAnts
             ants = []
+            best_distance = float('inf')
+            best_path = []
 
             for _ in range(self.num_ants):
-                start_node = np.random.randint(0, self.goal+1)
+                start_node = self.start
                 ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
                 ants.append(ant)
 
@@ -202,48 +195,14 @@ class AntColonySystem:
             # algoritmo demonstrou estagnação, etc
             for _ in range(self.num_iterations):
                 #ConstructSolutions
-                self.construct_solutions(ants)
-                #LocalSearch
-                # .........
-            ant = Ant(self.start, self.goal, self.num_nodes, found_goal=False)
-            solution_ph_matrix = [self.start]
-            pheromone = self.pheromone
-            # Trilha com maior quantidade de feromonios
-            while solution_ph_matrix[-1] != self.goal:
-                no_atual = solution_ph_matrix[-1]
-                proximo_no = None
-                max_feromonios = -1  # Inicialize com um valor negativo
-                available_nodes = [node for node in self.graph.neighbors(no_atual)]
-                # Percorra todas as arestas do nó atual
-                for proximo in available_nodes:
-                    if proximo not in solution_ph_matrix and  pheromone[no_atual][proximo] > max_feromonios:
-                        max_feromonios = pheromone[no_atual][proximo]
-                        proximo_no = proximo
-                if proximo_no is not None:
-                    solution_ph_matrix.append(proximo_no)
-                    edge = self.graph.get_edge_data(no_atual, proximo_no)
-                    ant.visit(proximo_no, edge)
-                else:
-                    break
-            cost_ph_matrix = ant.get_total_distance()
-
-            # Última formiga, saindo do ponto inicial, utilizando as informações prévias
-            ant.reset(self.start)
-
-            solution_last_ant = self.construct_solutions([ant])
-            cost_last_ant = ant.get_total_distance()
+                path, distance = self.construct_solutions(ants)
+                if distance < best_distance:
+                    best_path = path
+                #reset ants for the next iteration
+                for ant in ants:
+                    ant.reset(self.start)
             
-            # retorna qual estrategia achou a menor solução
-            if self.goal in solution_last_ant and self.goal in solution_ph_matrix:
-                result = solution_last_ant if cost_last_ant < cost_ph_matrix else cost_ph_matrix
-            elif self.goal in solution_last_ant:
-                result = solution_last_ant
-            elif self.goal in solution_ph_matrix:
-                result = solution_ph_matrix
-            else:
-                result = solution_ph_matrix
-            
-            return result
+            return best_path
 
 def xml_to_dict(input_data):
     message_list = []
