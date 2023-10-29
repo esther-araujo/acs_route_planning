@@ -2,5 +2,6 @@
 
 <launch>
     <node name="acs_running" pkg="acs_route_planning" type="colony.py" output="screen">
+        <param name="config" value="simulate" />
     </node>
 </launch>

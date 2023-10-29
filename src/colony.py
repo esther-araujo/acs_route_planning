@@ -39,12 +39,10 @@ class AntColonySystem:
         
         self.pheromone = np.ones((self.num_nodes, self.num_nodes))
 
-        self.forbidden_nodes = set()
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
 
-        forbidden_aux = set()
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
 
@@ -53,7 +51,6 @@ class AntColonySystem:
         if len(available_nodes) == 1 and current_node is not self.start:
             pre = ant.visited_nodes[len(ant.visited_nodes)-2]
             visited = ant.visited_nodes[:-1]
-            forbidden_aux.add(current_node)
             for curr in reversed(visited):
                 # remove pheromone
                 self.remove_pheromone(curr, pre)                
@@ -64,15 +61,8 @@ class AntColonySystem:
                 if len(available_nodes) > 2:
                     available_nodes = available_nodes = [node for node in self.graph.neighbors(curr) if node is not self.start]
                     break
-                forbidden_aux.add(curr)
                 pre = curr
 
-        if self.goal in forbidden_aux:
-            forbidden_aux.remove(self.goal)
-        if self.start in forbidden_aux:
-            forbidden_aux.remove(self.start)
-
-        self.forbidden_nodes = self.forbidden_nodes.union(forbidden_aux)
         # Force ant to go to new nodes if its possible
         if len(available_nodes) > 1:
             unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
@@ -87,14 +77,11 @@ class AntColonySystem:
 
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
-            if node in self.forbidden_nodes:
-                probability = 0.0
-            else:
-                pheromone_value = self.pheromone[current_node][node]
-                curr_x, curr_y = self.graph.nodes[current_node]['pos']
-                node_x, node_y = self.graph.nodes[node]['pos']
-                heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
-                probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
+            pheromone_value = self.pheromone[current_node][node]
+            curr_x, curr_y = self.graph.nodes[current_node]['pos']
+            node_x, node_y = self.graph.nodes[node]['pos']
+            heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
+            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
         
@@ -176,31 +163,27 @@ class AntColonySystem:
                 best_solution = ant.get_visited_nodes()
                 best_distance = ant.get_total_distance()
                 best_ant = ant
-            
         self.global_pheromone_update(ants_done_tour, best_ant)
         return best_solution, best_distance
         
     def run(self):
             #InitializeAnts
-            ants = []
             best_distance = float('inf')
             best_path = []
 
-            for _ in range(self.num_ants):
-                start_node = self.start
-                ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
-                ants.append(ant)
 
             # Pode ser num de iterações, tempo limite de cpu, encontrou uma solução aceitavel dentro de um limite especificado, 
             # algoritmo demonstrou estagnação, etc
             for _ in range(self.num_iterations):
+                ants = []
+                for _ in range(self.num_ants):
+                    start_node = self.start
+                    ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
+                    ants.append(ant)
                 #ConstructSolutions
                 path, distance = self.construct_solutions(ants)
                 if distance < best_distance:
                     best_path = path
-                #reset ants for the next iteration
-                for ant in ants:
-                    ant.reset(self.start)
             
             return best_path
 
@@ -280,7 +263,7 @@ def listener():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('acs_running', anonymous=True)
-    acs_config = rospy.get_param("~config_yaml", "simulate")  # Default simulate if there is no acs yaml param
+    acs_config = rospy.get_param("~config", "simulate")  # Default simulate if there is no acs yaml param
 
     room = rospy.get_param("~room", "cave")  # Default cave if there is room param
 
@@ -297,8 +280,8 @@ def listener():
 
     start = v_count
     goal = v_count + 1
-    num_ants = 50 # default
-    num_iterations = 10 # default
+    num_ants = 1
+    num_iterations = 1
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
@@ -351,9 +334,8 @@ def listener():
 
         acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
-        total_cost, best_solution = calculate_path_cost(G, best_solution)
-
         goal_founded = False
+        total_cost, best_solution = calculate_path_cost(G, best_solution)
 
         if goal in best_solution:
             goal_founded = True
