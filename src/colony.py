@@ -295,7 +295,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 50 # default
-    num_iterations = 10 # default
+    num_iterations = 50 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0

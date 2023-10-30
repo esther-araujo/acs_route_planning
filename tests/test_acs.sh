@@ -44,4 +44,4 @@ for file in "$directory"/*; do
     echo -ne "\r $processed_files% ${GREEN}${BAR:0:$processed_files}${RED}${BAR:$processed_files:$total_files}${NC}\n" 
 done
 
-paplay /usr/share/sounds/freedesktop/stereo/complete.oga
+paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
