@@ -12,8 +12,8 @@ def extract_distance_from_file(filename):
     return None
 
 # Directory paths for the two sets of files
-directory_path_1 = "tests/acs_logs"
-directory_path_2 = "tests/acs_logs_2"
+directory_path_1 = "tests/acs_logs_v1"
+directory_path_2 = "tests/acs_logs_jody"
 
 # Use glob to filter files based on a pattern (e.g., all files with '.log' extension)
 file_pattern_1 = os.path.join(directory_path_1, "*.log")
@@ -33,11 +33,11 @@ x_values_2 = list(range(len(file_names_2)))
 plt.plot(x_values_1, distances_1, marker='o', linestyle='-', label='ACS 1')
 
 # Create a line plot with x-values and corresponding distances for the second set of files
-plt.plot(x_values_2, distances_2, marker='s', linestyle='-', label='ACS 2')
+plt.plot(x_values_2, distances_2, marker='s', linestyle='-', label='ACS Jody')
 
-plt.xlabel("Map")
-plt.ylabel("Distance (m)")
-plt.title("Distance vs. Maps")
+plt.xlabel("Mapas")
+plt.ylabel("Distância (m)")
+plt.title("")
 
 # Customize x-axis labels with file names for the first set of files
 tick_positions = range(0, len(x_values_1), 10)
