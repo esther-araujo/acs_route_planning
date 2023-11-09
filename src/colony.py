@@ -38,41 +38,17 @@ class AntColonySystem:
         self.tau_0_local = tau_0_local
         
         self.pheromone = np.ones((self.num_nodes, self.num_nodes))
-
-        self.forbidden_nodes = set()
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
 
-        forbidden_aux = set()
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
 
-        # Mínimo local, volta pro ponto no grafo onde tem mais de duas opções (sai do mínimo) e remove o feromonio do 
-        # caminho que leva ao mínimo local
+        # Mínimo local, sem tratamento de deadlock
         if len(available_nodes) == 1 and current_node is not self.start:
-            pre = ant.visited_nodes[len(ant.visited_nodes)-2]
-            visited = ant.visited_nodes[:-1]
-            forbidden_aux.add(current_node)
-            for curr in reversed(visited):
-                # remove pheromone
-                self.remove_pheromone(curr, pre)                
-                available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
-                ant.visited_nodes.append(curr)
-                #É necessário atualizar o current da caminhada
-                current_node = curr
-                if len(available_nodes) > 2:
-                    available_nodes = available_nodes = [node for node in self.graph.neighbors(curr) if node is not self.start]
-                    break
-                forbidden_aux.add(curr)
-                pre = curr
+            return None
 
-        if self.goal in forbidden_aux:
-            forbidden_aux.remove(self.goal)
-        if self.start in forbidden_aux:
-            forbidden_aux.remove(self.start)
-
-        self.forbidden_nodes = self.forbidden_nodes.union(forbidden_aux)
         # Force ant to go to new nodes if its possible
         if len(available_nodes) > 1:
             unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
@@ -87,14 +63,11 @@ class AntColonySystem:
 
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
-            if node in self.forbidden_nodes:
-                probability = 0.0
-            else:
-                pheromone_value = self.pheromone[current_node][node]
-                curr_x, curr_y = self.graph.nodes[current_node]['pos']
-                node_x, node_y = self.graph.nodes[node]['pos']
-                heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
-                probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
+            pheromone_value = self.pheromone[current_node][node]
+            curr_x, curr_y = self.graph.nodes[current_node]['pos']
+            node_x, node_y = self.graph.nodes[node]['pos']
+            heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
+            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
         
@@ -126,14 +99,15 @@ class AntColonySystem:
         # pheromone update based on successful ants
         for ant in ants:
             epsilon = 1e-10
-            delta_tau = 1/(best_ant.total_distance+epsilon)
+            delta_tau = 1/(ant.total_distance+epsilon)
             for node in range(len(ant.visited_nodes) - 1):
                 i = ant.visited_nodes[node]
                 j = ant.visited_nodes[node + 1]
+                #Evaporate and Deposite
                 if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
-                    self.pheromone[i, j] = self.rho * self.pheromone[i, j] + (self.rho * delta_tau)
+                    self.pheromone[i, j] = ((1 - self.rho) * self.pheromone[i, j]) + (self.rho * delta_tau)
                     self.pheromone[j, i] = self.pheromone[i, j]
-
+                    
     def has_i_to_j_sequence(self, arr, i, j):
         # Testa se i e j estão no array e se estão em sequencia
         if i in arr and j in arr and (abs(arr.index(i) - arr.index(j)) == 1):
@@ -165,6 +139,8 @@ class AntColonySystem:
         for ant in ants:
             while ant.steps < max_steps:
                 next_node = self.select_next_node(ant)
+                if next_node == None:
+                    break
                 curr_node = ant.visited_nodes[-1]
                 edge = self.graph.get_edge_data(curr_node, next_node)
                 ant.visit(next_node, edge)
@@ -295,7 +271,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 50 # default
-    num_iterations = 50 # default
+    num_iterations = 30 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
