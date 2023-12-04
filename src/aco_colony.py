@@ -16,8 +16,8 @@ path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
 
 ants = []
 
-class AntColonySystem:
-    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, rho_local, tau_0_local, start_x, start_y, goal_x, goal_y):
+class AntSystem:
+    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, start_x, start_y, goal_x, goal_y):
         self.graph = graph
         self.start = start
         self.num_nodes = graph.number_of_nodes()
@@ -32,52 +32,24 @@ class AntColonySystem:
         self.start_y = start_y
         self.goal_x = goal_x
         self.goal_y = goal_y
-
-
-        self.rho_local = rho_local
-        self.tau_0_local = tau_0_local
         
         self.pheromone = np.ones((self.num_nodes, self.num_nodes))
-
-        self.forbidden_nodes = set()
         
     def select_next_node(self, ant):
         current_node = ant.visited_nodes[-1]
 
-        forbidden_aux = set()
         # Get available nodes
         available_nodes = [node for node in self.graph.neighbors(current_node)]
 
-        # Mínimo local, volta pro ponto no grafo onde tem mais de duas opções (sai do mínimo) e remove o feromonio do 
-        # caminho que leva ao mínimo local
+        # Mínimo local, sem tratamento de deadlock
         if len(available_nodes) == 1 and current_node is not self.start:
-            pre = ant.visited_nodes[len(ant.visited_nodes)-2]
-            visited = ant.visited_nodes[:-1]
-            forbidden_aux.add(current_node)
-            for curr in reversed(visited):
-                # remove pheromone
-                self.remove_pheromone(curr, pre)                
-                available_nodes = available_nodes = [node for node in self.graph.neighbors(curr)]
-                ant.visited_nodes.append(curr)
-                #É necessário atualizar o current da caminhada
-                current_node = curr
-                if len(available_nodes) > 2:
-                    available_nodes = available_nodes = [node for node in self.graph.neighbors(curr) if node is not self.start]
-                    break
-                forbidden_aux.add(curr)
-                pre = curr
+            return None
 
-        if self.goal in forbidden_aux:
-            forbidden_aux.remove(self.goal)
-        if self.start in forbidden_aux:
-            forbidden_aux.remove(self.start)
-
-        self.forbidden_nodes = self.forbidden_nodes.union(forbidden_aux)
-        # Force ant to go to new nodes if its possible
+        # Formiga não repete os nós
         if len(available_nodes) > 1:
             unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
-            if unvisited :
-                available_nodes = unvisited
+            if not unvisited:
+                return None
 
         probabilities = []
         total_prob = 0.0
@@ -87,14 +59,11 @@ class AntColonySystem:
 
         # Heuristica sem a matriz de distancias
         for node in available_nodes:
-            if node in self.forbidden_nodes:
-                probability = 0.0
-            else:
-                pheromone_value = self.pheromone[current_node][node]
-                curr_x, curr_y = self.graph.nodes[current_node]['pos']
-                node_x, node_y = self.graph.nodes[node]['pos']
-                heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
-                probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
+            pheromone_value = self.pheromone[current_node][node]
+            curr_x, curr_y = self.graph.nodes[current_node]['pos']
+            node_x, node_y = self.graph.nodes[node]['pos']
+            heuristic_value = original_heuristic(curr_x, curr_y, node_x, node_y)
+            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
             probabilities.append(probability)
             total_prob += probability
         
@@ -119,35 +88,28 @@ class AntColonySystem:
         
         return next_node
 
-    # Ant Colony System - Pheromone is only update by the successfull ants
+    # Ant System - Pheromone is only update by the successfull ants
     def global_pheromone_update(self, ants, best_ant):
         #Evaporate
         self.evaporate_pheromones()
         # pheromone update based on successful ants
         for ant in ants:
             epsilon = 1e-10
-            delta_tau = 1/(best_ant.total_distance+epsilon)
+            if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
+                delta_tau = 1/(best_ant.total_distance+epsilon)
+            else:
+                delta_tau = 0
             for node in range(len(ant.visited_nodes) - 1):
                 i = ant.visited_nodes[node]
                 j = ant.visited_nodes[node + 1]
-                if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
-                    self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
-                    self.pheromone[j, i] = self.pheromone[i, j]
+                self.pheromone[i, j] = (1 - self.rho)* self.pheromone[i, j] + (delta_tau)
+                self.pheromone[j, i] = self.pheromone[i, j]
 
     def has_i_to_j_sequence(self, arr, i, j):
         # Testa se i e j estão no array e se estão em sequencia
         if i in arr and j in arr and (abs(arr.index(i) - arr.index(j)) == 1):
             return True
         return False
-    
-    # Local Pheromone Update for ACS
-    def local_pheromone_update(self, from_node, to_node):
-        self.pheromone[from_node][to_node] = (1-self.rho_local)*self.pheromone[from_node][to_node]+(self.rho_local*self.tau_0_local)
-        self.pheromone[to_node][from_node] = self.pheromone[from_node][to_node]
-    
-    def remove_pheromone(self, from_node, to_node):
-        self.pheromone[from_node][to_node] = 0.0
-        self.pheromone[to_node][from_node] = 0.0
 
     def evaporate_pheromones(self):
         self.pheromone *= (1 - self.rho)
@@ -165,13 +127,15 @@ class AntColonySystem:
         for ant in ants:
             while ant.steps < max_steps:
                 next_node = self.select_next_node(ant)
+                if next_node == None:
+                    break
                 curr_node = ant.visited_nodes[-1]
                 edge = self.graph.get_edge_data(curr_node, next_node)
                 ant.visit(next_node, edge)
                 ant.steps = ant.steps + 1
+                # Quando a formiga chega no alvo, ela atualiza o feromonio e encerra seu tour
                 if next_node == ant.target_node:
-                    ants_done_tour.append(ant)
-                self.local_pheromone_update(curr_node, next_node)
+                    ant.steps = max_steps
             if ant.total_distance < best_distance and self.goal in ant.visited_nodes:
                 best_solution = ant.get_visited_nodes()
                 best_distance = ant.get_total_distance()
@@ -346,7 +310,7 @@ def listener():
             if closest is not None and closest != node:
                 G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
+        acs = AntSystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
         total_cost, best_solution = calculate_path_cost(G, best_solution)
         goal_founded = False
@@ -428,7 +392,7 @@ def listener():
             except rospy.ROSException:
                 rospy.logwarn("Timeout waiting for a message.")
 
-        acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
+        acs = AntSystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
 
         if goal in best_solution:
