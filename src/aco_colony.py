@@ -95,15 +95,17 @@ class AntSystem:
         # pheromone update based on successful ants
         for ant in ants:
             epsilon = 1e-10
-            if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
-                delta_tau = 1/(best_ant.total_distance+epsilon)
-            else:
-                delta_tau = 0
+            delta_tau = 1/(best_ant.total_distance+epsilon)
             for node in range(len(ant.visited_nodes) - 1):
                 i = ant.visited_nodes[node]
                 j = ant.visited_nodes[node + 1]
-                self.pheromone[i, j] = (1 - self.rho)* self.pheromone[i, j] + (delta_tau)
-                self.pheromone[j, i] = self.pheromone[i, j]
+                if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
+                    self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
+                    self.pheromone[j, i] = self.pheromone[i, j]
+                else: 
+                    self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j]
+                    self.pheromone[j, i] = self.pheromone[i, j]
+
 
     def has_i_to_j_sequence(self, arr, i, j):
         # Testa se i e j estão no array e se estão em sequencia
@@ -120,7 +122,7 @@ class AntSystem:
         best_distance = float('inf')
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes * 2
+        max_steps = self.num_nodes * 3
         ants_done_tour = []
         best_ant = []
         # Perform ant tours and update pheromones
@@ -259,13 +261,11 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 50 # default
-    num_iterations = 2 # default
+    num_iterations = 30 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
     rho = 0.1
-    rho_local = 0.1
-    tau_0_local = 1
     q0 = 0.5
 
     map_metadata = rospy.wait_for_message('map_metadata', MapMetaData)
@@ -327,7 +327,7 @@ def listener():
             
         # GENERATE LOG FILE
         # Specify the directory path where you want to save the file
-        log_path = path_route_planning+'/tests/acs_logs/'
+        log_path = path_route_planning+'/tests/aco_logs/'
 
         # Specify the file name and extension
         log_file = f'{room}.log'
@@ -343,7 +343,8 @@ def listener():
             'Iterations': num_iterations,
             'Repetitions': num_rep,
             'distance': total_cost,
-            'nNodesBP': len(best_solution)
+            'nNodesBP': len(best_solution),
+            'path': best_solution
         }   
 
         # Attempt to create and write to the file
@@ -403,6 +404,11 @@ def listener():
             print("GOAL FOUNDED")
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
+
+        # Filtrar as posições apenas para os nós no caminho
+        path_positions = {node: {'x': round(G.nodes[node]['pos'][0],2), 'y': round(G.nodes[node]['pos'][1],2)} for node in best_solution}
+
+        #print(path_positions)
 
         edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 

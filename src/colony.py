@@ -133,6 +133,9 @@ class AntColonySystem:
                 if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
                     self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
                     self.pheromone[j, i] = self.pheromone[i, j]
+                else: 
+                    self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j]
+                    self.pheromone[j, i] = self.pheromone[i, j]
 
     def has_i_to_j_sequence(self, arr, i, j):
         # Testa se i e j estão no array e se estão em sequencia
@@ -295,7 +298,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 50 # default
-    num_iterations = 2 # default
+    num_iterations = 30 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
@@ -360,7 +363,7 @@ def listener():
             print("GOAL FOUNDED")
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
-            
+                    
         # GENERATE LOG FILE
         # Specify the directory path where you want to save the file
         log_path = path_route_planning+'/tests/acs_logs/'
@@ -379,7 +382,9 @@ def listener():
             'Iterations': num_iterations,
             'Repetitions': num_rep,
             'distance': total_cost,
-            'nNodesBP': len(best_solution)
+            'nNodesBP': len(best_solution),
+            'path': best_solution
+
         }   
 
         # Attempt to create and write to the file
@@ -440,11 +445,17 @@ def listener():
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
 
+        # Filtrar as posições apenas para os nós no caminho
+        path_positions = {node: {'x': round(G.nodes[node]['pos'][0],2), 'y': round(G.nodes[node]['pos'][1],2)} for node in best_solution}
+
+        #print(path_positions)
+
         edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
         edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
         pos = nx.get_node_attributes(G, 'pos')
+        
         nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
         plt.show()
 

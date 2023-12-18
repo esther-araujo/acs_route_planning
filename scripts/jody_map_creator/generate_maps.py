@@ -53,6 +53,17 @@ map_yaml = {
     'occupied_thresh': 0.65,
     'free_thresh': 0.196
 }
+
+# map yaml 
+aco_map_yaml = {
+    'image': "map.pgm",
+    'resolution': 0.4,
+    'origin': [0.0, 0.0, 0.0],
+    'negate':0,
+    'occupied_thresh': 0.65,
+    'free_thresh': 0.196
+}
+
 limit = 0
 
 # Rviz config
@@ -209,11 +220,22 @@ def generate_island_map(filename):
     mapa_gray = mapa.convert("L")
     mapa_gray.save(pgm_filename)
 
+    # PNG
+    pgm_filename = f"{path_multi_robot}/cfg/maps/{filename}/map.png"
+    mapa_gray = mapa.convert("L")
+    mapa_gray.save(pgm_filename)
+
     # Map yaml
     file_path = f"{path_multi_robot}/cfg/maps/{filename}/map.yaml"
 
     with open(file_path, 'w') as file:
         yaml.dump(map_yaml, file)
+
+    # Map for aco yaml
+    file_path = f"{path_multi_robot}/cfg/maps/{filename}/aco_map.yaml"
+
+    with open(file_path, 'w') as file:
+        yaml.dump(aco_map_yaml, file)
 
     # Graph yaml
     file_path = f"{path_multi_robot}/cfg/graph/{filename}/graph.yaml"

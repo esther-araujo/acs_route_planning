@@ -2,3 +2,4 @@ __pycache__/
 /scripts/jody_map_creator/generated_maps
 /scripts/map_creator/generated_maps
 /tests/acs_logs
+/tests/aco_logs
