@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <arg name="room" default="cave" />
+  <arg name="launch_rviz" default="false" />
+  <arg name="launch_map_server" default="true" />
+  <arg name="launch_multi_robot_route_planner" default="false" />
+  <arg name="launch_local_controller" default="false" />
+  <arg name="launch_local_controller_one_for_all" default="false" />
+  <arg name="nr_of_robots" default="3" />
+  <arg name="launch_stage" default="false" />
+  <arg name="launch_graph_generator" default="true" />
+  <arg name="cfg" default="default" />
+  <arg name="launch_path_synchronizer" default="false" />
+  <arg name="load_segments" default="false" />
+  <arg name="map_name" default="" />
+  <arg name="update_rate_info" default="1.0" />
+
+  <!-- start map server publishing a image of the map-->
+  <group if="$(arg launch_map_server)">
+    <include file="$(find tuw_multi_robot_demo)/launch/map_server.launch">
+      <arg name="room" value="$(arg room)" />
+    </include>
+  </group>
+
+  <!-- generate voronoi graph-->
+  <group if="$(arg launch_graph_generator)">
+    <group if="$(arg load_segments)">
+      <include file="$(find tuw_multi_robot_demo)/launch/graph_generator.launch">
+        <arg name="cfg" value="$(arg room)" />
+        <arg name="custom_graph_path"
+          value="$(find tuw_multi_robot_demo)/cfg/graph/$(arg room)/cache/$(arg map_name)" />
+      </include>
+    </group>
+    <group unless="$(arg load_segments)">
+      <include file="$(find tuw_multi_robot_demo)/launch/graph_generator.launch">
+        <arg name="cfg" value="$(arg room)" />
+      </include>
+    </group>
+  </group>
+
+  <group>
+    <arg name="launch_file" default="acs_run_test_conv.launch" />
+    <include file="$(find acs_route_planning)/launch/$(arg launch_file)">
+      <arg name="room" value="$(arg room)" />
+    </include>
+  </group>
+
+</launch>

@@ -163,6 +163,7 @@ class AntSystem:
             path, distance = self.construct_solutions(ants)
             if distance < best_distance:
                 best_path = path
+
         if not best_path:
             best_path = ants[-1].get_visited_nodes()
         return best_path
