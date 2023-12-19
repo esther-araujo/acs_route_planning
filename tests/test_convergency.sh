@@ -17,6 +17,7 @@ processed_files=0
 
 echo "Processando mapa: $1"
 process_name="roslaunch acs_route_planning test_convergency.launch room:="$1" launch_file:="$2""
+count_launch=0
 
 gnome-terminal -- bash -c "$process_name"
 

@@ -3,3 +3,4 @@ __pycache__/
 /scripts/map_creator/generated_maps
 /tests/acs_logs
 /tests/aco_logs
+/tests/conv_logs

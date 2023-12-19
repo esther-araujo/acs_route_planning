@@ -202,10 +202,13 @@ class AntColonySystem:
             path, distance = self.construct_solutions(ants)
             if distance < best_distance:
                 best_path = path
-        
-            best_solution = remove_loops_from_path(best_path)
+                best_solution = remove_loops_from_path(best_path)
+            if self.goal in path:
+                idx = path.index(self.goal)
+                best_solution = remove_loops_from_path(path[:idx+1])
+            
             cost, _ = calculate_path_cost(self.graph, best_solution)
-
+        
             dist_it.append(cost)
 
         if not best_path:
@@ -393,22 +396,22 @@ def listener():
     except Exception as e:
         print(f"An error occurred: {e}")
 
-    edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+    # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-    edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+    # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
-    pos = nx.get_node_attributes(G, 'pos')
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-    plt.show()
+    # pos = nx.get_node_attributes(G, 'pos')
+    # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+    # plt.show()
 
-    iterations = range(1, len(dist_it) + 1)
+    # iterations = range(1, len(dist_it) + 1)
 
-    plt.plot(iterations, dist_it, marker='o')
-    plt.title('Path Length vs Iteration Number')
-    plt.xlabel('Iteration Number')
-    plt.ylabel('Path Length')
-    plt.grid(True)
-    plt.show()
+    # plt.plot(iterations, dist_it, marker='o')
+    # plt.title('Path Length vs Iteration Number')
+    # plt.xlabel('Iteration Number')
+    # plt.ylabel('Path Length')
+    # plt.grid(True)
+    # plt.show()
 
 
 
