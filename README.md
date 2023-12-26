@@ -42,7 +42,5 @@ roslaunch acs_route_planning  world.launch world:=world_name
 ```
 
 <h1 align="center">
-  <video width="320" height="240" controls>
-  <source src="./images/gazebo.mp4" type="video/mp4">
-</video>
+  <img alt="" width="60%" height="auto" src="./images/gazebo.gif"/>
 </h4>
