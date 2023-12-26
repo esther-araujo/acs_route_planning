@@ -13,5 +13,7 @@ for filename in os.listdir(log_directory):
             content = file.read()
             if "goalFounded: true" in content:
                 goal_founded_count += 1
+            else:
+                print(filename)
 
 print(f"Number of log files with goalFounded set to true: {goal_founded_count}")

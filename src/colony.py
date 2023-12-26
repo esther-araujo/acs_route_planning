@@ -198,8 +198,9 @@ class AntColonySystem:
                 ants.append(ant)
             #ConstructSolutions
             path, distance = self.construct_solutions(ants)
-            if distance < best_distance:
+            if distance < best_distance and self.goal in path:
                 best_path = path
+                best_distance = distance
 
         if not best_path:
             best_path = ants[-1].get_visited_nodes()

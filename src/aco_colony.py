@@ -45,11 +45,11 @@ class AntSystem:
         if len(available_nodes) == 1 and current_node is not self.start:
             return None
 
-        # Formiga não repete os nós
+        # Force ant to go to new nodes if its possible
         if len(available_nodes) > 1:
             unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
-            if not unvisited:
-                return None
+            if unvisited :
+                available_nodes = unvisited
 
         probabilities = []
         total_prob = 0.0
@@ -88,23 +88,28 @@ class AntSystem:
         
         return next_node
 
-    # Ant System - Pheromone is only update by the successfull ants
-    def global_pheromone_update(self, ants, best_ant):
+    # Ant System - Pheromone update
+    def global_pheromone_update(self, ant):
         #Evaporate
         self.evaporate_pheromones()
-        # pheromone update based on successful ants
-        for ant in ants:
-            epsilon = 1e-10
-            delta_tau = 1/(best_ant.total_distance+epsilon)
-            for node in range(len(ant.visited_nodes) - 1):
-                i = ant.visited_nodes[node]
-                j = ant.visited_nodes[node + 1]
-                if self.has_i_to_j_sequence(best_ant.visited_nodes, i, j):
-                    self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
-                    self.pheromone[j, i] = self.pheromone[i, j]
-                else: 
-                    self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j]
-                    self.pheromone[j, i] = self.pheromone[i, j]
+        epsilon = 1e-10
+        delta_tau = 1/(ant.total_distance+epsilon)
+        for node in range(len(ant.visited_nodes) - 1):
+            i = ant.visited_nodes[node]
+            j = ant.visited_nodes[node + 1]
+            self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
+            self.pheromone[j, i] = self.pheromone[i, j]
+
+    
+    def bonus_trail(self, ant):
+        epsilon = 1e-10
+        delta_tau = 1/(ant.total_distance+epsilon)
+        # pheromone update
+        for node in range(len(ant.visited_nodes) - 1):
+            i = ant.visited_nodes[node]
+            j = ant.visited_nodes[node + 1]
+            self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
+            self.pheromone[j, i] = self.pheromone[i, j]
 
 
     def has_i_to_j_sequence(self, arr, i, j):
@@ -122,9 +127,7 @@ class AntSystem:
         best_distance = float('inf')
 
         # Máximo de passos do tour de cada formiga
-        max_steps = self.num_nodes * 3
-        ants_done_tour = []
-        best_ant = []
+        max_steps = self.num_nodes * 2
         # Perform ant tours and update pheromones
         for ant in ants:
             while ant.steps < max_steps:
@@ -138,12 +141,13 @@ class AntSystem:
                 # Quando a formiga chega no alvo, ela atualiza o feromonio e encerra seu tour
                 if next_node == ant.target_node:
                     ant.steps = max_steps
-            if ant.total_distance < best_distance and self.goal in ant.visited_nodes:
-                best_solution = ant.get_visited_nodes()
-                best_distance = ant.get_total_distance()
-                best_ant = ant
-            
-        self.global_pheromone_update(ants_done_tour, best_ant)
+            if self.goal in ant.visited_nodes:
+                self.global_pheromone_update(ant)
+                if ant.total_distance < best_distance:
+                    best_solution = ant.get_visited_nodes()
+                    best_distance = ant.get_total_distance()
+                    self.bonus_trail(ant)
+
         return best_solution, best_distance
         
     def run(self):
@@ -161,8 +165,9 @@ class AntSystem:
                 ants.append(ant)
             #ConstructSolutions
             path, distance = self.construct_solutions(ants)
-            if distance < best_distance:
+            if distance < best_distance and self.goal in path:
                 best_path = path
+                best_distance = distance
 
         if not best_path:
             best_path = ants[-1].get_visited_nodes()
