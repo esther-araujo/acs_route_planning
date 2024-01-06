@@ -4,3 +4,4 @@ __pycache__/
 /tests/acs_logs
 /tests/aco_logs
 /tests/conv_logs
+/tests/a_star_logs

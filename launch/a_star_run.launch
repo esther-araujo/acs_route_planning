@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+    <node name="acs_running" pkg="acs_route_planning" type="a_star.py" output="screen">
+        <param name="config" value="simulate" />
+    </node>
+</launch>

@@ -7,6 +7,7 @@ directory="/home/esther/catkin_ws/src/acs_route_planning/scripts/jody_map_creato
 rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"/*
 
 log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"
+tuw="/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo/cfg/maps"
 
 BAR='####################################################################################################' 
 RED='\033[0;31m'
@@ -19,7 +20,7 @@ processed_files=0
 # Loop through files in the directory
 for file in "$directory"/*; do
     # Check if the file is a regular file
-    if [ -f "$file" ]; then
+    if [ -e "$tuw/$file_name" ]; then
         # Extract the filename without extension
         filename=$(basename "$file" | cut -d. -f1)
         # Run your command with the filename as an argument

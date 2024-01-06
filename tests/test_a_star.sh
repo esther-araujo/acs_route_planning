@@ -4,9 +4,9 @@
 directory="/home/esther/catkin_ws/src/acs_route_planning/scripts/jody_map_creator/generated_maps"
 #directory="/home/esther/catkin_ws/src/acs_route_planning/scripts/map_creator/generated_maps"
 
-rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/aco_logs"/*
+rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/a_star_logs"/*
 
-log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/aco_logs"
+log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/a_star_logs"
 tuw="/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo/cfg/maps"
 
 BAR='####################################################################################################' 
@@ -25,7 +25,7 @@ for file in "$directory"/*; do
         filename=$(basename "$file" | cut -d. -f1)
         # Run your command with the filename as an argument
         echo "Processando mapa: $filename"
-        process_name="roslaunch acs_route_planning test_aco_ambient.launch room:="$filename""
+        process_name="roslaunch acs_route_planning test_a_star_ambient.launch room:="$filename""
         
         gnome-terminal -- bash -c "$process_name"
 
