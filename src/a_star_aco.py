@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import networkx as nx
 import rospy
+import numpy as np
+from ant import Ant 
 from geometry_msgs.msg import PointStamped
 from nav_msgs.msg import MapMetaData
 from tuw_multi_robot_msgs.msg import Graph
@@ -12,88 +14,163 @@ import yaml
 # Pasta com o gerador de grafos de voronoi
 path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
 
-def heuristic(x1, y1, x2, y2):
-    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+ants = []
 
-def get_lowest_f_node_from(open_list):
-    lowest_node = list(open_list)[0]
-    for node in open_list:
-        if node.f() < lowest_node.f():
-            lowest_node = node
-    return lowest_node
-
-def way(node_current_x, node_current_y, node_successor_x, node_successor_y):
-    return heuristic(node_current_x, node_current_y, node_successor_x, node_successor_y)
-
-class Node:
-    def __init__(self, id, x, y):
-        self.id = id
-        self.x = x
-        self.y = y
-        self.parent = None
-        self.g = 0
-        self.h = 0
-        self.w = 0 
-        self.cov = None
-
-    def f(self):
-        return self.g + self.h
-
-class ASTAR:
-    def __init__(self, graph, start, goal, start_x, start_y, goal_x, goal_y):
+class AntSystem:
+    def __init__(self, graph, start, goal, num_ants, num_iterations, alpha, beta, rho, q0, start_x, start_y, goal_x, goal_y):
         self.graph = graph
         self.start = start
-        self.goal = goal
         self.num_nodes = graph.number_of_nodes()
+        self.num_ants = num_ants
+        self.num_iterations = num_iterations
+        self.alpha = alpha
+        self.beta = beta
+        self.rho = rho
+        self.q0 = q0
+        self.goal = goal
         self.start_x = start_x
         self.start_y = start_y
         self.goal_x = goal_x
         self.goal_y = goal_y
+        
+        self.pheromone = np.ones((self.num_nodes, self.num_nodes))
+        
+    def select_next_node(self, ant):
+        current_node = ant.visited_nodes[-1]
 
-    def run(self):
+        # Get available nodes
+        available_nodes = [node for node in self.graph.neighbors(current_node)]
 
-        open_list = []
-        close_list = []
-        node_current = Node(self.start, self.start_x, self.start_y)
-        node_current.h = heuristic(self.start_x, self.start_y, self.goal_x, self.goal_y)
-        open_list.append(node_current)
-
-        while len(open_list) > 0:
-            node_current = get_lowest_f_node_from(open_list)
-            if node_current.id == self.goal:
-                break
-            for successor_id in self.graph.neighbors(node_current.id):
-                node_succ_x, node_succ_y = self.graph.nodes[successor_id]['pos']
-                node_successor = Node(successor_id, node_succ_x, node_succ_y)
-                node_curr_x, node_curr_y = self.graph.nodes[node_current.id]['pos']
-                successor_current_cost = node_current.g + way(node_curr_x, node_curr_y, node_succ_x, node_succ_y)
-                if node_successor in open_list:
-                    if node_successor.g <= successor_current_cost:
-                        continue
-                elif node_successor in close_list:
-                    if node_successor.g <= successor_current_cost:
-                        continue
-                    close_list.remove(node_successor)
-                    open_list.append(node_successor)
-                else:
-                    open_list.append(node_successor)
-                    node_x, node_y = self.graph.nodes[node_successor.id]['pos']
-                    node_successor.h = heuristic(node_x, node_y, self.goal_x, self.goal_y)
-                node_successor.g = successor_current_cost
-                node_successor.parent = node_current
-
-            open_list.remove(node_current)
-            close_list.append(node_current)
-
-        if node_current.id != self.goal:
+        # Mínimo local, sem tratamento de deadlock
+        if len(available_nodes) == 1 and current_node is not self.start:
             return None
-        else:
-            path = []
-            while node_current is not None:
-                path.append(node_current.id)
-                node_current = node_current.parent
-            return list(reversed(path))
 
+        # Force ant to go to new nodes if its possible
+        if len(available_nodes) > 1:
+            unvisited = [node for node in available_nodes if node not in ant.visited_nodes]
+            if unvisited :
+                available_nodes = unvisited
+
+        probabilities = []
+        total_prob = 0.0
+
+        if self.goal in available_nodes:
+            return self.goal
+
+        # Heuristica sem a matriz de distancias
+        for node in available_nodes:
+            pheromone_value = self.pheromone[current_node][node]
+            node_x, node_y = self.graph.nodes[node]['pos']
+            heuristic_value = a_star_heuristic(self.start_x, self.start_y, self.goal_x, self.goal_y, node_x, node_y)
+            probability = (pheromone_value ** self.alpha) * (heuristic_value ** self.beta)
+            probabilities.append(probability)
+            total_prob += probability
+        
+        # Normalize probabilities
+        epsilon = 1e-10  # evitar que total_prob seja zero, divisao por zero
+        probabilities_exploit = probabilities
+        probabilities_explore = [prob / (total_prob + epsilon) for prob in probabilities]
+        
+        # Choose the next node based on the ACS probability formula
+        random_value = np.random.rand()
+
+        if random_value <= self.q0:
+            next_node = available_nodes[np.argmax(probabilities_exploit)]
+        else:
+            random_number = np.random.rand() 
+            cumulative_prob = 0
+            next_node = available_nodes[-1]
+            for i, element in enumerate(probabilities_explore):
+                cumulative_prob += element
+                if random_number <= cumulative_prob:
+                    next_node = available_nodes[i]
+        
+        return next_node
+
+    # Ant System - Pheromone update
+    def global_pheromone_update(self, ant):
+        #Evaporate
+        self.evaporate_pheromones()
+        epsilon = 1e-10
+        delta_tau = 1/(ant.total_distance+epsilon)
+        for node in range(len(ant.visited_nodes) - 1):
+            i = ant.visited_nodes[node]
+            j = ant.visited_nodes[node + 1]
+            self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
+            self.pheromone[j, i] = self.pheromone[i, j]
+
+    
+    def bonus_trail(self, ant):
+        epsilon = 1e-10
+        delta_tau = 1/(ant.total_distance+epsilon)
+        # pheromone update
+        for node in range(len(ant.visited_nodes) - 1):
+            i = ant.visited_nodes[node]
+            j = ant.visited_nodes[node + 1]
+            self.pheromone[i, j] = (1 - self.rho) * self.pheromone[i, j] + (self.rho * delta_tau)
+            self.pheromone[j, i] = self.pheromone[i, j]
+
+
+    def has_i_to_j_sequence(self, arr, i, j):
+        # Testa se i e j estão no array e se estão em sequencia
+        if i in arr and j in arr and (abs(arr.index(i) - arr.index(j)) == 1):
+            return True
+        return False
+
+    def evaporate_pheromones(self):
+        self.pheromone *= (1 - self.rho)
+
+    def construct_solutions(self, ants):
+
+        best_solution = []
+        best_distance = float('inf')
+
+        # Máximo de passos do tour de cada formiga
+        max_steps = self.num_nodes * 2
+        # Perform ant tours and update pheromones
+        for ant in ants:
+            while ant.steps < max_steps:
+                next_node = self.select_next_node(ant)
+                if next_node == None:
+                    break
+                curr_node = ant.visited_nodes[-1]
+                edge = self.graph.get_edge_data(curr_node, next_node)
+                ant.visit(next_node, edge)
+                ant.steps = ant.steps + 1
+                # Quando a formiga chega no alvo, ela atualiza o feromonio e encerra seu tour
+                if next_node == ant.target_node:
+                    ant.steps = max_steps
+            if self.goal in ant.visited_nodes:
+                self.global_pheromone_update(ant)
+                if ant.total_distance < best_distance:
+                    best_solution = ant.get_visited_nodes()
+                    best_distance = ant.get_total_distance()
+                    self.bonus_trail(ant)
+
+        return best_solution, best_distance
+        
+    def run(self):
+        #InitializeAnts
+        best_distance = float('inf')
+        best_path = []
+
+        # Pode ser num de iterações, tempo limite de cpu, encontrou uma solução aceitavel dentro de um limite especificado, 
+        # algoritmo demonstrou estagnação, etc
+        for _ in range(self.num_iterations):
+            ants = []
+            for _ in range(self.num_ants):
+                start_node = self.start
+                ant = Ant(start_node, self.goal, self.num_nodes, found_goal=False)
+                ants.append(ant)
+            #ConstructSolutions
+            path, distance = self.construct_solutions(ants)
+            if distance < best_distance and self.goal in path:
+                best_path = path
+                best_distance = distance
+
+        if not best_path:
+            best_path = ants[-1].get_visited_nodes()
+        return best_path
 
 def xml_to_dict(input_data):
     message_list = []
@@ -154,8 +231,10 @@ def create_nx_graph(vertice):
 def calculate_edge_weight(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-def original_heuristic(x1, y1, x2, y2):
-    return 1 / (calculate_edge_weight(x1, y1, x2, y2))
+def a_star_heuristic(start_x, start_y, goal_x, goal_y, node_x, node_y):
+    h = calculate_edge_weight(node_x, node_y, goal_x, goal_y)
+    g = calculate_edge_weight(node_x, node_y, start_x, start_y)
+    return 1 / (h + g)
 
 def find_closest_node_efficient(graph, kdtree, target_node):
     position_target = target_node['pos']
@@ -188,7 +267,13 @@ def listener():
 
     start = v_count
     goal = v_count + 1
-
+    num_ants = 50 # default
+    num_iterations = 30 # default
+    num_rep = 1 # default
+    alpha = 1.0
+    beta = 2.0
+    rho = 0.1
+    q0 = 0.5
 
     map_metadata = rospy.wait_for_message('map_metadata', MapMetaData)
 
@@ -199,6 +284,9 @@ def listener():
 
             # Parse the YAML data
             data = yaml.load(yaml_file, Loader=yaml.FullLoader)
+
+            # ACS PARAMETERS
+            num_rep = data["repetitions"]
 
             start_x = data["start_point_x"]
             start_y = data["start_point_y"]
@@ -229,8 +317,8 @@ def listener():
             if closest is not None and closest != node:
                 G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
-        astar = ASTAR(graph=G,start=start, goal=goal, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
-        best_solution = astar.run()
+        acs = AntSystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
+        best_solution = acs.run()
         total_cost, best_solution = calculate_path_cost(G, best_solution)
         goal_founded = False
 
@@ -243,7 +331,7 @@ def listener():
             print("GOAL FOUNDED")
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
-                    
+            
         # GENERATE LOG FILE
         # Specify the directory path where you want to save the file
         log_path = path_route_planning+'/tests/a_star_logs/'
@@ -258,10 +346,12 @@ def listener():
             'goalFounded': goal_founded,
             'startNode': start,
             'endNode': goal,
+            'Ants': num_ants,
+            'Iterations': num_iterations,
+            'Repetitions': num_rep,
             'distance': total_cost,
             'nNodesBP': len(best_solution),
             'path': best_solution
-
         }   
 
         # Attempt to create and write to the file
@@ -310,8 +400,8 @@ def listener():
             except rospy.ROSException:
                 rospy.logwarn("Timeout waiting for a message.")
 
-        astar = ASTAR(graph=G,start=start, goal=goal, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
-        best_solution = astar.run()
+        acs = AntSystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
+        best_solution = acs.run()
 
         if goal in best_solution:
             idx = best_solution.index(goal)
@@ -332,7 +422,6 @@ def listener():
         edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
         pos = nx.get_node_attributes(G, 'pos')
-        
         nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
         plt.show()
 

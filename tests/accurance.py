@@ -1,7 +1,7 @@
 import os
 
 # Define the directory containing your log files
-log_directory = "tests/aco_logs"
+log_directory = "tests/a_star_logs"
 
 # Initialize a counter for files with goalFounded set to true
 goal_founded_count = 0
