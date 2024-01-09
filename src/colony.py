@@ -423,7 +423,6 @@ def listener():
                 G.add_node(id_v, pos=(message.point.x+map_compensation, message.point.y+map_compensation))
                 
                 kdtree = cKDTree(position_list)
-
                 node = G.nodes[id_v]
 
                 # Use the find_closest_node_efficient function to find the closest node for each node and create edges

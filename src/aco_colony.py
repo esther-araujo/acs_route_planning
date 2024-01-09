@@ -147,13 +147,15 @@ class AntSystem:
                     best_solution = ant.get_visited_nodes()
                     best_distance = ant.get_total_distance()
                     self.bonus_trail(ant)
-
+        if not best_solution:
+            best_solution = ants[-1].get_visited_nodes()
         return best_solution, best_distance
         
     def run(self):
         #InitializeAnts
         best_distance = float('inf')
         best_path = []
+        last_path = []
 
         # Pode ser num de iterações, tempo limite de cpu, encontrou uma solução aceitavel dentro de um limite especificado, 
         # algoritmo demonstrou estagnação, etc
@@ -165,12 +167,14 @@ class AntSystem:
                 ants.append(ant)
             #ConstructSolutions
             path, distance = self.construct_solutions(ants)
+            last_path = path
+
             if distance < best_distance and self.goal in path:
                 best_path = path
                 best_distance = distance
 
         if not best_path:
-            best_path = ants[-1].get_visited_nodes()
+            best_path = last_path
         return best_path
 
 def xml_to_dict(input_data):
@@ -267,7 +271,7 @@ def listener():
     start = v_count
     goal = v_count + 1
     num_ants = 50 # default
-    num_iterations = 30 # default
+    num_iterations = 2 # default
     num_rep = 1 # default
     alpha = 1.0
     beta = 2.0
