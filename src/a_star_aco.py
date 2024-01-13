@@ -319,7 +319,7 @@ def listener():
             # Use the find_closest_node_efficient function to find the closest node for each node and create edges
             closest = find_closest_node_efficient(G, kdtree, node)
             if closest is not None and closest != node:
-                G.add_edge(goal, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+                G.add_edge(goal, closest, weight=calculate_edge_weight(data["end_point_x"], data["end_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
         acs = AntSystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()

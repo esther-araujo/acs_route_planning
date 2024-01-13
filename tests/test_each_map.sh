@@ -10,7 +10,7 @@ rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/a_star_logs"/*
 
 log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"
 # log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/aco_logs"
-# log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/a_star_logs"
+#log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/a_star_logs"
 
 tuw="/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo/cfg/maps"
 
@@ -56,4 +56,4 @@ for ((iteration = 1; iteration <= num_iterations; iteration++)); do
     echo -ne "\r $processed_files% ${GREEN}${BAR:0:$processed_files}${RED}${BAR:$processed_files:$total_files}${NC}\n" 
 done
 
-#paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
+paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga
