@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import math
 from scipy.spatial import cKDTree
 import yaml
+from geometry_msgs.msg import Point, PoseArray, Pose
 
 # Pasta com o gerador de grafos de voronoi
 path_route_planning = "/home/esther/catkin_ws/src/acs_route_planning"
@@ -307,7 +308,7 @@ def listener():
     rho = 0.1
     rho_local = 0.1
     tau_0_local = 1
-    q0 = 0.9
+    q0 = 0.5
 
     map_metadata = rospy.wait_for_message('map_metadata', MapMetaData)
 
@@ -361,7 +362,6 @@ def listener():
             idx = best_solution.index(goal)
             best_solution = remove_loops_from_path(best_solution[:idx+1])
             total_cost, best_solution = calculate_path_cost(G, best_solution)
-            #move_robot.publish("move")
             print("GOAL FOUNDED")
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
@@ -451,18 +451,17 @@ def listener():
 
         # Filtrar as posições apenas para os nós no caminho
         path_positions = {node: {'x': round(G.nodes[node]['pos'][0] - map_compensation,2), 'y': round(G.nodes[node]['pos'][1] - map_compensation,2)} for node in best_solution}
-        print(path_positions)
+        points_list = [{'x': v['x'], 'y': v['y']} for k, v in path_positions.items()]
+        publish_coordinates(points_list)
 
-        #print(path_positions)
+        # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-        edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+        # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
-        edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
-
-        pos = nx.get_node_attributes(G, 'pos')
+        # pos = nx.get_node_attributes(G, 'pos')
         
-        nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-        plt.show()
+        # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        # plt.show()
 
 def calculate_path_cost(graph, path):
     cost = 0  # Initialize the cost to 0
@@ -499,6 +498,20 @@ def remove_loops_from_path(path):
             while unique_path[-1] != vertex:
                 visited.remove(unique_path.pop())
     return unique_path
+
+def publish_coordinates(trajectory):
+    pub = rospy.Publisher('/path_topic', PoseArray, queue_size=10)
+    rate = rospy.Rate(10)  # 10 Hz
+    pose_array = PoseArray()
+
+    for point in trajectory:
+        pose = Pose()
+        pose.position = Point(point['x'], point['y'], 0.0) 
+        pose_array.poses.append(pose)
+
+    while not rospy.is_shutdown():
+        pub.publish(pose_array)
+        rate.sleep()
 
 if __name__ == '__main__':
     listener()

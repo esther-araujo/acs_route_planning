@@ -1,36 +1,31 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 import rospy
 import actionlib
-from move_base_msgs.msg import MoveBaseAction, MoveBaseResult, MoveBaseGoal
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from geometry_msgs.msg import PoseArray
 
-class MoveHusky(object):
-  def __init__(self):
-    self.client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
-    self.client.wait_for_server()
-    self.goal = MoveBaseGoal()
+class MoveRobot(object):
+    def __init__(self):
+        self.client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+        self.client.wait_for_server()
+        self.goal = MoveBaseGoal()
 
-  def moveToDest(self, x, y):
-    self.goal.target_pose.header.frame_id = "odom"
-    self.goal.target_pose.pose.position.x = x
-    self.goal.target_pose.pose.position.y = y
-    self.goal.target_pose.pose.orientation.z = 0.7071
-    self.goal.target_pose.pose.orientation.w = 0.7071
-    rate = rospy.Rate(10)
-    self.client.send_goal(self.goal)
-    result = self.client.get_result()
-    while result == None:
-      result = self.client.get_result()
-      status = self.client.get_state()
-      rospy.loginfo("Status: {}".format(status))
-      rospy.loginfo("Result: {}".format(result))
-      rate.sleep()
+    def moveToDest(self, pose):
+        self.goal.target_pose.header.frame_id = "odom"
+        self.goal.target_pose.pose = pose
+        self.client.send_goal(self.goal)
+        self.client.wait_for_result()
+
+def pose_array_callback(msg, moveRobot):
+    for pose in msg.poses:
+        moveRobot.moveToDest(pose.position)
 
 if __name__ == "__main__":
-  rospy.init_node("move_base_client")
-  moveHusky = MoveHusky()
+    rospy.init_node("move_base_client")
+    moveRobot = MoveRobot()
 
-  while not rospy.is_shutdown():
-    moveHusky.moveToDest(5.8, 0.8)
-    # moveHusky.moveToDest(-4.0, -2.0)
-    # moveHusky.moveToDest(0.0, 0.0)
+    # Subscribe to the topic that provides PoseArray
+    rospy.Subscriber("path_topic", PoseArray, pose_array_callback, moveRobot)
+
+    rospy.spin()
