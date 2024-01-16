@@ -307,7 +307,7 @@ def listener():
     rho = 0.1
     rho_local = 0.1
     tau_0_local = 1
-    q0 = 0.2
+    q0 = 0.9
 
     map_metadata = rospy.wait_for_message('map_metadata', MapMetaData)
 
@@ -399,13 +399,13 @@ def listener():
         except Exception as e:
             print(f"An error occurred: {e}")
 
-        edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+        # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-        edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+        # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
-        pos = nx.get_node_attributes(G, 'pos')
-        nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-        plt.show()
+        # pos = nx.get_node_attributes(G, 'pos')
+        # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        # plt.show()
 
     else:
         while message_count < required_message_count:
@@ -424,9 +424,9 @@ def listener():
                 
                 kdtree = cKDTree(position_list)
                 node = G.nodes[id_v]
-                # x, y  = node['pos']
-                # print("x", x)
-                # print("y", y)
+                x, y  = node['pos']
+                print("x", x)
+                print("y", y)
 
                 # Use the find_closest_node_efficient function to find the closest node for each node and create edges
                 closest = find_closest_node_efficient(G, kdtree, node)
@@ -450,7 +450,8 @@ def listener():
             print("Best distance:", total_cost)
 
         # Filtrar as posições apenas para os nós no caminho
-        path_positions = {node: {'x': round(G.nodes[node]['pos'][0],2), 'y': round(G.nodes[node]['pos'][1],2)} for node in best_solution}
+        path_positions = {node: {'x': round(G.nodes[node]['pos'][0] - map_compensation,2), 'y': round(G.nodes[node]['pos'][1] - map_compensation,2)} for node in best_solution}
+        print(path_positions)
 
         #print(path_positions)
 

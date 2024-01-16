@@ -17,9 +17,10 @@
 	</include>
 
 	<include file="$(find p3at_tutorial)/launch/upload_pioneer3at.xml" />
-
-	<arg name="x" default="3" />
-	<arg name="y" default="-4" />
+	x 5.217929363250732
+	y 0.5424637794494629
+	<arg name="x" default="5" />
+	<arg name="y" default="0.5" />
 	<arg name="z" default="0" />
 
 	<!-- push robot_description to factory and spawn robot in gazebo -->

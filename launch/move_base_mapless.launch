@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- <include file="$(find acs_route_planning)/launch/pioneer3at.gazebo.launch" /> -->
+
+  <!--- Run Move Base -->  
+  <include file="$(find acs_route_planning)/launch/move_base.launch">
+    <arg name="no_static_map" value="true"/>
+  </include>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find acs_route_planning)/launch/navigation.rviz"/>
+
+</launch>
