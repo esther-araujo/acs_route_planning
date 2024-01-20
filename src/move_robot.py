@@ -1,31 +1,39 @@
 #!/usr/bin/env python3
 
 import rospy
-import actionlib
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import PoseArray
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+import actionlib
 
-class MoveRobot(object):
+class GoalSender:
     def __init__(self):
-        self.client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
-        self.client.wait_for_server()
-        self.goal = MoveBaseGoal()
+        rospy.init_node('goal_sender', anonymous=True)
 
-    def moveToDest(self, pose):
-        self.goal.target_pose.header.frame_id = "odom"
-        self.goal.target_pose.pose = pose
-        self.client.send_goal(self.goal)
-        self.client.wait_for_result()
+        rospy.Subscriber('/path_topic', PoseArray, self.goal_callback)
 
-def pose_array_callback(msg, moveRobot):
-    for pose in msg.poses:
-        moveRobot.moveToDest(pose.position)
+        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        rospy.loginfo("Waiting for move_base action server...")
+        self.move_base_client.wait_for_server()
 
-if __name__ == "__main__":
-    rospy.init_node("move_base_client")
-    moveRobot = MoveRobot()
+    def goal_callback(self, pose_array):
+        rospy.loginfo("Received PoseArray with {} poses".format(len(pose_array.poses)))
 
-    # Subscribe to the topic that provides PoseArray
-    rospy.Subscriber("path_topic", PoseArray, pose_array_callback, moveRobot)
+        for goal_pose in pose_array.poses:
+            move_base_goal = MoveBaseGoal()
+            move_base_goal.target_pose.header.frame_id = "map"
+            move_base_goal.target_pose.pose = goal_pose
 
-    rospy.spin()
+            rospy.loginfo("Sending goal: {}".format(goal_pose))
+            self.move_base_client.send_goal(move_base_goal)
+
+            self.move_base_client.wait_for_result()
+
+    def run(self):
+        rospy.spin()
+
+if __name__ == '__main__':
+    try:
+        goal_sender = GoalSender()
+        goal_sender.run()
+    except rospy.ROSInterruptException:
+        pass

@@ -300,7 +300,7 @@ def listener():
 
     start = v_count
     goal = v_count + 1
-    num_ants = 50 # default
+    num_ants = 100 # default
     num_iterations = 2 # default
     num_rep = 1 # default
     alpha = 1.0
@@ -425,8 +425,8 @@ def listener():
                 kdtree = cKDTree(position_list)
                 node = G.nodes[id_v]
                 x, y  = node['pos']
-                print("x", x)
-                print("y", y)
+                print("x", message.point.x)
+                print("y", message.point.y)
 
                 # Use the find_closest_node_efficient function to find the closest node for each node and create edges
                 closest = find_closest_node_efficient(G, kdtree, node)
