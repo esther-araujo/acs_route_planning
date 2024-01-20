@@ -1,36 +1,25 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
 import rospy
+from geometry_msgs.msg import PoseArray, PoseStamped
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import actionlib
-from move_base_msgs.msg import MoveBaseAction, MoveBaseResult, MoveBaseGoal
 
-class MoveHusky(object):
-  def __init__(self):
-    self.client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
-    self.client.wait_for_server()
-    self.goal = MoveBaseGoal()
+def navigate_to_pose(pose_stamped):
+    client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+    client.wait_for_server()
 
-  def moveToDest(self, x, y):
-    self.goal.target_pose.header.frame_id = "odom"
-    self.goal.target_pose.pose.position.x = x
-    self.goal.target_pose.pose.position.y = y
-    self.goal.target_pose.pose.orientation.z = 0.7071
-    self.goal.target_pose.pose.orientation.w = 0.7071
-    rate = rospy.Rate(10)
-    self.client.send_goal(self.goal)
-    result = self.client.get_result()
-    while result == None:
-      result = self.client.get_result()
-      status = self.client.get_state()
-      rospy.loginfo("Status: {}".format(status))
-      rospy.loginfo("Result: {}".format(result))
-      rate.sleep()
+    goal = MoveBaseGoal()
+    goal.target_pose = pose_stamped
 
-if __name__ == "__main__":
-  rospy.init_node("move_base_client")
-  moveHusky = MoveHusky()
+    client.send_goal(goal)
+    client.wait_for_result()
 
-  while not rospy.is_shutdown():
-    moveHusky.moveToDest(5.8, 0.8)
-    # moveHusky.moveToDest(-4.0, -2.0)
-    # moveHusky.moveToDest(0.0, 0.0)
+def pose_array_callback(data):
+    for pose_stamped in data.poses:
+        navigate_to_pose(pose_stamped)
+
+if __name__ == '__main__':
+    rospy.init_node('navigation_node')
+    rospy.Subscriber('path_topic', PoseArray, pose_array_callback)
+    rospy.spin()

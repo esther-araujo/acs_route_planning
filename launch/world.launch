@@ -5,6 +5,36 @@
 
 	<env name="GAZEBO_MODEL_PATH" value="$(find map2gazebo)/models:$(optenv GAZEBO_MODEL_PATH)" />
 
+	<!--args
+	for tuw_multi_graph-->
+	<arg name="launch_map_server" default="true" />
+	<arg name="launch_graph_generator" default="true" />
+	<arg name="load_segments" default="false" />
+
+
+	<!-- start map server publishing a image of the map-->
+	<group if="$(arg launch_map_server)">
+		<include file="$(find tuw_multi_robot_demo)/launch/map_server.launch">
+			<arg name="room" value="$(arg room)" />
+		</include>
+	</group>
+
+	<!-- generate voronoi graph-->
+	<group if="$(arg launch_graph_generator)">
+		<group if="$(arg load_segments)">
+			<include file="$(find tuw_multi_robot_demo)/launch/graph_generator.launch">
+				<arg name="cfg" value="$(arg room)" />
+				<arg name="custom_graph_path"
+					value="$(find tuw_multi_robot_demo)/cfg/graph/$(arg room)/cache/$(arg map_name)" />
+			</include>
+		</group>
+		<group unless="$(arg load_segments)">
+			<include file="$(find tuw_multi_robot_demo)/launch/graph_generator.launch">
+				<arg name="cfg" value="$(arg room)" />
+			</include>
+		</group>
+	</group>
+
 	<arg name="debug" default="false" />
 	<arg name="gui" default="true" />
 	<arg name="headless" default="false" />
@@ -35,5 +65,8 @@
 
 	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+	<!-- run a node with acs algorithm-->
+	<include file="$(find acs_route_planning)/launch/acs_run.launch" />
 
 </launch>
