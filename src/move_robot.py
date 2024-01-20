@@ -1,39 +1,36 @@
-#!/usr/bin/env python3
+#! /usr/bin/env python3
 
 import rospy
-from geometry_msgs.msg import PoseArray
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import actionlib
+from move_base_msgs.msg import MoveBaseAction, MoveBaseResult, MoveBaseGoal
 
-class GoalSender:
-    def __init__(self):
-        rospy.init_node('goal_sender', anonymous=True)
+class MoveHusky(object):
+  def __init__(self):
+    self.client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+    self.client.wait_for_server()
+    self.goal = MoveBaseGoal()
 
-        rospy.Subscriber('/path_topic', PoseArray, self.goal_callback)
+  def moveToDest(self, x, y):
+    self.goal.target_pose.header.frame_id = "odom"
+    self.goal.target_pose.pose.position.x = x
+    self.goal.target_pose.pose.position.y = y
+    self.goal.target_pose.pose.orientation.z = 0.7071
+    self.goal.target_pose.pose.orientation.w = 0.7071
+    rate = rospy.Rate(10)
+    self.client.send_goal(self.goal)
+    result = self.client.get_result()
+    while result == None:
+      result = self.client.get_result()
+      status = self.client.get_state()
+      rospy.loginfo("Status: {}".format(status))
+      rospy.loginfo("Result: {}".format(result))
+      rate.sleep()
 
-        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        rospy.loginfo("Waiting for move_base action server...")
-        self.move_base_client.wait_for_server()
+if __name__ == "__main__":
+  rospy.init_node("move_base_client")
+  moveHusky = MoveHusky()
 
-    def goal_callback(self, pose_array):
-        rospy.loginfo("Received PoseArray with {} poses".format(len(pose_array.poses)))
-
-        for goal_pose in pose_array.poses:
-            move_base_goal = MoveBaseGoal()
-            move_base_goal.target_pose.header.frame_id = "map"
-            move_base_goal.target_pose.pose = goal_pose
-
-            rospy.loginfo("Sending goal: {}".format(goal_pose))
-            self.move_base_client.send_goal(move_base_goal)
-
-            self.move_base_client.wait_for_result()
-
-    def run(self):
-        rospy.spin()
-
-if __name__ == '__main__':
-    try:
-        goal_sender = GoalSender()
-        goal_sender.run()
-    except rospy.ROSInterruptException:
-        pass
+  while not rospy.is_shutdown():
+    moveHusky.moveToDest(5.8, 0.8)
+    # moveHusky.moveToDest(-4.0, -2.0)
+    # moveHusky.moveToDest(0.0, 0.0)

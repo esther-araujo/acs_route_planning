@@ -1,13 +1,14 @@
 <?xml version="1.0"?>
 <launch>
 
-	<arg name="pkg_gazebo_worlds" default="$(find acs_route_planning)" />
+	<arg name="pkg_gazebo_worlds" default="$(find p3at_tutorial)" />
 
 	<env name="GAZEBO_MODEL_PATH" value="$(find map2gazebo)/models:$(optenv GAZEBO_MODEL_PATH)" />
 
 	<arg name="debug" default="false" />
 	<arg name="gui" default="true" />
 	<arg name="headless" default="false" />
+	<arg name="map" default="map1.world" />
 
 	<!-- Start Gazebo with a blank world -->
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -16,13 +17,13 @@
 		<arg name="paused" value="false" />
 		<arg name="use_sim_time" value="true" />
 		<arg name="headless" value="$(arg headless)" />
-		<arg name="world_name" value="$(find acs_route_planning)/worlds/map2.world" />
+		<arg name="world_name" value="$(find acs_route_planning)/worlds/$(arg map)" />
 	</include>
 
 
 	<include file="$(find p3at_tutorial)/launch/upload_pioneer3at.xml" />
-	<arg name="x" default="0" />
-	<arg name="y" default="0" />
+	<arg name="x" default="-5.9" />
+	<arg name="y" default="-7.24" />
 	<arg name="z" default="0" />
 
 	<!-- push robot_description to factory and spawn robot in gazebo -->
