@@ -1,15 +1,23 @@
 <?xml version="1.0"?>
 <launch>
 
-	<arg name="pkg_gazebo_worlds" default="$(find p3at_tutorial)"/>
+	<arg name="pkg_gazebo_worlds" default="$(find acs_route_planning)" />
 
-    <env name="GAZEBO_MODEL_PATH" value="$(arg pkg_gazebo_worlds)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+	<env name="GAZEBO_MODEL_PATH" value="$(find map2gazebo)/models:$(optenv GAZEBO_MODEL_PATH)" />
 
-	<include file="$(find gazebo_ros)/launch/empty_world.launch" >
-        <!-- To use this world go to https://github.com/Gastd/cic and download the model -->
-        <!-- <arg name="world_name" value="$(find p3at_tutorial)/worlds/cic/cic.world"/> -->
-        <arg name="world_name" value="$(find acs_route_planning)/worlds/factory.world"/>
-    </include>
+	<arg name="debug" default="false" />
+	<arg name="gui" default="true" />
+	<arg name="headless" default="false" />
+
+	<!-- Start Gazebo with a blank world -->
+	<include file="$(find gazebo_ros)/launch/empty_world.launch">
+		<arg name="debug" value="$(arg debug)" />
+		<arg name="gui" value="$(arg gui)" />
+		<arg name="paused" value="false" />
+		<arg name="use_sim_time" value="true" />
+		<arg name="headless" value="$(arg headless)" />
+		<arg name="world_name" value="$(find acs_route_planning)/worlds/map2.world" />
+	</include>
 
 
 	<include file="$(find p3at_tutorial)/launch/upload_pioneer3at.xml" />
