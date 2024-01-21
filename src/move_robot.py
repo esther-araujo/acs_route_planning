@@ -8,7 +8,7 @@ import math
 class Navigator:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('navigation_example', anonymous=True)
+        rospy.init_node('move_robot', anonymous=True)
 
         # Create an action client for the move_base server
         self.move_base_client = SimpleActionClient('move_base', MoveBaseAction)
@@ -16,8 +16,9 @@ class Navigator:
         # Wait for the move_base action server to come up
         self.move_base_client.wait_for_server()
 
-        # Subscribe to the path_topic
-        self.path_subscriber = rospy.Subscriber('path_topic', PoseArray, self.path_callback)
+        path = rospy.wait_for_message('path_topic', PoseArray)
+
+        self.exec_path(path)
 
     def calculate_orientation(self, current_x, current_y, next_x, next_y):
         # Calculate the angle between the two points
@@ -43,7 +44,7 @@ class Navigator:
         else:
             rospy.logwarn("Failed to reach the goal point.")
 
-    def path_callback(self, pose_array):
+    def exec_path(self, pose_array):
         # Extract individual poses from the received PoseArray
         poses = pose_array.poses
         for i in range(len(poses)-1):
