@@ -414,13 +414,13 @@ def listener():
                 message = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
                 id_v = v_count if message_count == 0 else (v_count+1)
                 if message_count == 0:
-                    start_x = message.point.x+map_compensation
-                    start_y = message.point.y+map_compensation
+                    start_x = message.point.x
+                    start_y = message.point.y
                 if message_count == 1:
-                    goal_x = message.point.x+map_compensation
-                    goal_y = message.point.y+map_compensation
+                    goal_x = message.point.x
+                    goal_y = message.point.y
                 # 16 x 16 do mapa
-                G.add_node(id_v, pos=(message.point.x+map_compensation, message.point.y+map_compensation))
+                G.add_node(id_v, pos=(message.point.x, message.point.y))
                 
                 kdtree = cKDTree(position_list)
                 node = G.nodes[id_v]
@@ -431,7 +431,7 @@ def listener():
                 # Use the find_closest_node_efficient function to find the closest node for each node and create edges
                 closest = find_closest_node_efficient(G, kdtree, node)
                 if closest is not None and closest != node:
-                    G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+map_compensation, message.point.y+map_compensation, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+                    G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x, message.point.y, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
                 message_count += 1
             except rospy.ROSException:
@@ -448,20 +448,22 @@ def listener():
             print("GOAL FOUNDED")
             print("Best solution:", best_solution)
             print("Best distance:", total_cost)
+        
+        edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+
+        edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+
+        pos = nx.get_node_attributes(G, 'pos')
+        
+        nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        plt.show()
 
         # Filtrar as posições apenas para os nós no caminho
-        path_positions = {node: {'x': round(G.nodes[node]['pos'][0] - map_compensation,2), 'y': round(G.nodes[node]['pos'][1] - map_compensation,2)} for node in best_solution}
+        path_positions = {node: {'x': round(G.nodes[node]['pos'][0],2), 'y': round(G.nodes[node]['pos'][1] ,2)} for node in best_solution}
         points_list = [{'x': v['x'], 'y': v['y']} for k, v in path_positions.items()]
         publish_coordinates(points_list)
 
-        # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
-
-        # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
-
-        # pos = nx.get_node_attributes(G, 'pos')
         
-        # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-        # plt.show()
 
 def calculate_path_cost(graph, path):
     cost = 0  # Initialize the cost to 0
