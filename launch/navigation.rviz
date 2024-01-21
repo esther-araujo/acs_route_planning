@@ -254,10 +254,6 @@ Visualization Manager:
           Unreliable: false
           Use Timestamp: false
           Value: true
-          Offset:
-            X: 0
-            Y: 0
-            Z: 0
         - Alpha: 0.699999988079071
           Class: rviz/Map
           Color Scheme: costmap

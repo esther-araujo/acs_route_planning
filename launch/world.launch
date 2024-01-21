@@ -60,8 +60,6 @@
 		args="-urdf -param robot_description -model Pioneer3at -x $(arg x) -y $(arg y) -z $(arg z)"
 		respawn="false" output="screen" />
 
-	<!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find acs_route_planning)/launch/gazebo.rviz" /> -->
-
 	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" /> 
 

@@ -297,7 +297,7 @@ def listener():
 
     start = v_count
     goal = v_count + 1
-    num_ants = 100 # default
+    num_ants = 50 # default
     num_iterations = 2 # default
     num_rep = 1 # default
     alpha = 1.0
@@ -455,7 +455,7 @@ def listener():
 
         # Filtrar as posições apenas para os nós no caminho
         path_positions = {node: {'x': round(G.nodes[node]['pos'][0] - map_compensation,2), 'y': round(G.nodes[node]['pos'][1] - map_compensation,2)} for node in best_solution}
-        points_list = [{'x': v['x'], 'y': v['y']} for k, v in path_positions.items()]
+        points_list = [{'x': v['x'], 'y': v['y']} for k, v in list(path_positions.items())[1:]]
         publish_coordinates(points_list)
 
         
