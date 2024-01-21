@@ -50,7 +50,6 @@
 		<arg name="world_name" value="$(find acs_route_planning)/worlds/$(arg map)" />
 	</include>
 
-
 	<include file="$(find p3at_tutorial)/launch/upload_pioneer3at.xml" />
 	<arg name="x" default="-5.9" />
 	<arg name="y" default="-7.24" />
@@ -61,10 +60,10 @@
 		args="-urdf -param robot_description -model Pioneer3at -x $(arg x) -y $(arg y) -z $(arg z)"
 		respawn="false" output="screen" />
 
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find acs_route_planning)/launch/gazebo.rviz" />
+	<!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find acs_route_planning)/launch/gazebo.rviz" /> -->
 
 	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
-	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" /> 
 
 	<!-- run a node with acs algorithm-->
 	<include file="$(find acs_route_planning)/launch/acs_run.launch" />

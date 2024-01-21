@@ -414,24 +414,24 @@ def listener():
                 message = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
                 id_v = v_count if message_count == 0 else (v_count+1)
                 if message_count == 0:
-                    start_x = message.point.x
-                    start_y = message.point.y
+                    start_x = message.point.x+map_compensation
+                    start_y = message.point.y+map_compensation
                 if message_count == 1:
-                    goal_x = message.point.x
-                    goal_y = message.point.y
+                    goal_x = message.point.x+map_compensation
+                    goal_y = message.point.y+map_compensation
                 # 16 x 16 do mapa
-                G.add_node(id_v, pos=(message.point.x, message.point.y))
+                G.add_node(id_v, pos=(message.point.x+map_compensation, message.point.y+map_compensation))
                 
                 kdtree = cKDTree(position_list)
                 node = G.nodes[id_v]
                 x, y  = node['pos']
-                print("x", message.point.x)
-                print("y", message.point.y)
+                print("x", x)
+                print("y", y)
 
                 # Use the find_closest_node_efficient function to find the closest node for each node and create edges
                 closest = find_closest_node_efficient(G, kdtree, node)
                 if closest is not None and closest != node:
-                    G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x, message.point.y, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+                    G.add_edge(id_v, closest, weight=calculate_edge_weight(message.point.x+map_compensation, message.point.y+map_compensation, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
                 message_count += 1
             except rospy.ROSException:
@@ -459,7 +459,7 @@ def listener():
         plt.show()
 
         # Filtrar as posições apenas para os nós no caminho
-        path_positions = {node: {'x': round(G.nodes[node]['pos'][0],2), 'y': round(G.nodes[node]['pos'][1] ,2)} for node in best_solution}
+        path_positions = {node: {'x': round(G.nodes[node]['pos'][0] - map_compensation,2), 'y': round(G.nodes[node]['pos'][1] - map_compensation,2)} for node in best_solution}
         points_list = [{'x': v['x'], 'y': v['y']} for k, v in path_positions.items()]
         publish_coordinates(points_list)
 
