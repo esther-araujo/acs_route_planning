@@ -17,9 +17,27 @@ class Navigator:
         # Wait for the move_base action server to come up
         self.move_base_client.wait_for_server()
 
-        path = rospy.wait_for_message('path_topic', PoseArray)
+        self.path = rospy.wait_for_message('path_topic', PoseArray)
+        self.set_orientations(self.path)
+        self.distance_tolerance = 0.2
+        # Index to keep track of the current goal
+        self.current_goal_index = 0
 
-        self.exec_path(path)
+        # Send the first goal
+        self.send_next_goal()
+    
+
+    def feedback_callback(self, feedback):
+        # Monitor feedback, and decide when to send a new goal
+
+        # Example: Check if the robot is close to the current goal
+        current_pose = feedback.base_position.pose.position
+        goal_pose = self.path.poses[self.current_goal_index].position
+        distance_to_goal = ((current_pose.x - goal_pose.x) ** 2 +
+                            (current_pose.y - goal_pose.y) ** 2) ** 0.5
+
+        if distance_to_goal < 2:
+            self.send_next_goal()
 
     def calculate_orientation(self, pos1, pos2):
         # Calculate the direction vector between two positions
@@ -34,41 +52,35 @@ class Navigator:
         quaternion = quaternion_from_euler(roll, pitch, yaw)
 
         return Quaternion(*quaternion)
+    
+    def send_next_goal(self):
+        # Check if there are more goals in the array
+        if self.current_goal_index < len(self.path.poses)-1:
+            # Create a new MoveBaseGoal for the next waypoint
+            new_goal = MoveBaseGoal()
+            new_goal.target_pose.header.frame_id = "odom"
+            new_goal.target_pose.pose = self.path.poses[self.current_goal_index]
 
-    def navigate_to_goal(self, goal_pose):
-        goal = MoveBaseGoal()
-        goal.target_pose = goal_pose
+            # Send the new goal to the navigation stack
+            self.move_base_client.send_goal(new_goal, feedback_cb=self.feedback_callback)
 
-        # Send the goal and wait for the result
-        self.move_base_client.send_goal(goal)
-        self.move_base_client.wait_for_result()
-
-        # Check if the goal was successful
-        if self.move_base_client.get_state() == 3:  # State 3 corresponds to SUCCEEDED
-            rospy.loginfo("Navigation to the goal point successful!")
-        else:
-            rospy.logwarn("Failed to reach the goal point.")
-
-    def exec_path(self, pose_array):
-        # Extract individual poses from the received PoseArray
+            # Increment the index for the next iteration
+            self.current_goal_index += 1
+            if self.current_goal_index == len(self.path.poses)-1:
+                rospy.loginfo("All goals reached.")
+        
+    def set_orientations(self, pose_array):
+    # Extract individual poses from the received PoseArray
         poses = pose_array.poses
         for i in range(len(poses)-1):
-            current_pose = poses[i]
             pos1 = [poses[i].position.x, poses[i].position.y, poses[i].position.z]
             pos2 = [poses[i + 1].position.x, poses[i + 1].position.y, poses[i + 1].position.z]
+            
             orientation = self.calculate_orientation(pos1, pos2)
-            # Calculate orientation for the next goal
-
-            # Create a PoseStamped object for the next goal
-            next_goal_pose = PoseStamped()
-            next_goal_pose.header.frame_id = 'odom'  # Adjust the frame_id based on your map frame
-            next_goal_pose.header.stamp = rospy.Time.now()
-            next_goal_pose.pose = current_pose
-            next_goal_pose.pose.orientation.w = orientation.w
-            next_goal_pose.pose.orientation.z = orientation.z
-
-            # Call the navigate_to_goal function for each pose
-            self.navigate_to_goal(next_goal_pose)
+            
+            # Add the calculated orientation to the current pose
+            poses[i].orientation.w = orientation.w
+            poses[i].orientation.z = orientation.z
 
 if __name__ == '__main__':
     # Create an instance of the Navigator class
