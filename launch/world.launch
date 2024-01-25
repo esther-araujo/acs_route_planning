@@ -3,7 +3,7 @@
 
 	<arg name="pkg_gazebo_worlds" default="$(find p3at_tutorial)" />
 
-	<env name="GAZEBO_MODEL_PATH" value="$(find map2gazebo)/models:$(optenv GAZEBO_MODEL_PATH)" />
+	<env name="GAZEBO_MODEL_PATH" value="$(find acs_route_planning)/models:$(optenv GAZEBO_MODEL_PATH)" />
 
 	<!--args
 	for tuw_multi_graph-->
@@ -38,7 +38,7 @@
 	<arg name="debug" default="false" />
 	<arg name="gui" default="true" />
 	<arg name="headless" default="false" />
-	<arg name="map" default="map1.world" />
+	<arg name="map" default="map.world" />
 
 	<!-- Start Gazebo with a blank world -->
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">

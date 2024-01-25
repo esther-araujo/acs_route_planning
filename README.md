@@ -28,6 +28,11 @@ This will run the test enviroment, using the generated maps (in scripts/jody_map
 ```bash
 roslaunch acs_route_planning  world.launch map:=map_name.world room:=room_name
 ```
+Ex:
+```bash
+roslaunch acs_route_planning  world.launch room:=randomMap56_FixDisc_5_50_2_1
+```
+
 <h1 align="center">
   <img alt="" width="60%" height="auto" src="./images/gazebo.gif"/>
 </h4>

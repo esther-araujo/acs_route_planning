@@ -2,8 +2,9 @@
 import rospy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib import SimpleActionClient
-from geometry_msgs.msg import PoseStamped, PoseArray
-import math
+from geometry_msgs.msg import PoseStamped, PoseArray, Quaternion
+from math import atan2
+from tf.transformations import quaternion_from_euler
 
 class Navigator:
     def __init__(self):
@@ -20,15 +21,19 @@ class Navigator:
 
         self.exec_path(path)
 
-    def calculate_orientation(self, current_x, current_y, next_x, next_y):
-        # Calculate the angle between the two points
-        angle = math.atan2(next_y - current_y, next_x - current_x)
+    def calculate_orientation(self, pos1, pos2):
+        # Calculate the direction vector between two positions
+        direction_vector = [pos2[0] - pos1[0], pos2[1] - pos1[1], pos2[2] - pos1[2]]
 
-        # Convert the angle to quaternion representation
-        orientation_w = math.cos(angle / 2)
-        orientation_z = math.sin(angle / 2)
+        # Normalize the direction vector
+        norm = sum([x**2 for x in direction_vector])**0.5
+        direction_vector = [x/norm for x in direction_vector]
 
-        return orientation_w, 0, 0, orientation_z  # Assuming a 2D orientation, so roll and pitch are 0
+        # Compute the quaternion based on the direction vector
+        roll, pitch, yaw = 0.0, 0.0, atan2(direction_vector[1], direction_vector[0])
+        quaternion = quaternion_from_euler(roll, pitch, yaw)
+
+        return Quaternion(*quaternion)
 
     def navigate_to_goal(self, goal_pose):
         goal = MoveBaseGoal()
@@ -49,22 +54,18 @@ class Navigator:
         poses = pose_array.poses
         for i in range(len(poses)-1):
             current_pose = poses[i]
-            next_pose = poses[i+1]
-
-            current_x, current_y = current_pose.position.x, current_pose.position.y
-            next_x, next_y = next_pose.position.x, next_pose.position.y
-
+            pos1 = [poses[i].position.x, poses[i].position.y, poses[i].position.z]
+            pos2 = [poses[i + 1].position.x, poses[i + 1].position.y, poses[i + 1].position.z]
+            orientation = self.calculate_orientation(pos1, pos2)
             # Calculate orientation for the next goal
-            orientation = self.calculate_orientation(current_x, current_y, next_x, next_y)
 
             # Create a PoseStamped object for the next goal
             next_goal_pose = PoseStamped()
             next_goal_pose.header.frame_id = 'odom'  # Adjust the frame_id based on your map frame
             next_goal_pose.header.stamp = rospy.Time.now()
-            next_goal_pose.pose.position.x = next_x
-            next_goal_pose.pose.position.y = next_y
-            next_goal_pose.pose.orientation.w = orientation[0]
-            next_goal_pose.pose.orientation.z = orientation[3]
+            next_goal_pose.pose = current_pose
+            next_goal_pose.pose.orientation.w = orientation.w
+            next_goal_pose.pose.orientation.z = orientation.z
 
             # Call the navigate_to_goal function for each pose
             self.navigate_to_goal(next_goal_pose)
