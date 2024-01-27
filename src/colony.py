@@ -398,22 +398,6 @@ def listener():
 
 
     else:
-        # Adding robot_start to graph
-        robot_start = rospy.wait_for_message('pose', Odometry)
-        start_x = robot_start.pose.pose.position.x+map_compensation
-        start_y = robot_start.pose.pose.position.y+map_compensation
-        G.add_node(v_count, pos=(start_x, start_y))
-        kdtree = cKDTree(position_list)
-        node = G.nodes[v_count]
-        print("ROBOT POSE FOUNDED")
-        print(start_x)
-        print(start_y)
-
-        # Use the find_closest_node_efficient function to find the closest node for each node and create edges
-        closest = find_closest_node_efficient(G, kdtree, node)
-        if closest is not None and closest != node:
-            G.add_edge(v_count, closest, weight=calculate_edge_weight(start_x, start_y, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
-
         # Adding goal to graph
         robot_goal = rospy.wait_for_message('/clicked_point', PointStamped)  # Adjust the topic and message type
         goal_x = robot_goal.point.x+map_compensation
@@ -430,6 +414,22 @@ def listener():
         closest = find_closest_node_efficient(G, kdtree, node)
         if closest is not None and closest != node:
             G.add_edge(v_count+1, closest, weight=calculate_edge_weight(goal_x, goal_y, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+
+        # Adding robot_start to graph
+        robot_start = rospy.wait_for_message('pose', Odometry)
+        start_x = robot_start.pose.pose.position.x+map_compensation
+        start_y = robot_start.pose.pose.position.y+map_compensation
+        G.add_node(v_count, pos=(start_x, start_y))
+        kdtree = cKDTree(position_list)
+        node = G.nodes[v_count]
+        print("ROBOT POSE FOUNDED")
+        print(start_x)
+        print(start_y)
+
+        # Use the find_closest_node_efficient function to find the closest node for each node and create edges
+        closest = find_closest_node_efficient(G, kdtree, node)
+        if closest is not None and closest != node:
+            G.add_edge(v_count, closest, weight=calculate_edge_weight(start_x, start_y, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
         acs = AntColonySystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, rho_local=rho_local, tau_0_local=tau_0_local, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
