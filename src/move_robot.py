@@ -2,14 +2,16 @@
 import rospy
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib import SimpleActionClient
-from geometry_msgs.msg import PoseStamped, PoseArray, Quaternion
+from geometry_msgs.msg import PoseArray, Quaternion
 from math import atan2
 from tf.transformations import quaternion_from_euler
+from nav_msgs.msg import Path
 
 class Navigator:
     def __init__(self):
         # Initialize the ROS node
         rospy.init_node('move_robot', anonymous=True)
+        self.path_msg = Path()
 
         # Create an action client for the move_base server
         self.move_base_client = SimpleActionClient('move_base', MoveBaseAction)
@@ -29,8 +31,7 @@ class Navigator:
 
     def feedback_callback(self, feedback):
         # Monitor feedback, and decide when to send a new goal
-
-        # Example: Check if the robot is close to the current goal
+        # Check if the robot is close to the current goal
         current_pose = feedback.base_position.pose.position
         goal_pose = self.path.poses[self.current_goal_index].position
         distance_to_goal = ((current_pose.x - goal_pose.x) ** 2 +

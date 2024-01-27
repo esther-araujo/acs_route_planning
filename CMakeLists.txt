@@ -167,8 +167,10 @@ include_directories(
 ## in contrast to setup.py, you can choose the destination
 # catkin_install_python(PROGRAMS
 #   src/colony.py
-#   src/generate_occ_grid.py
-#   src/test.py
+#   src/move_robot.py
+#   src/a_star_aco_test.py
+#   src/aco_colony_test.py
+#   src/acs_colony_test.py
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 #)
 

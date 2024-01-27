@@ -2,7 +2,7 @@
 
 <launch>
     <arg name="room" default="" /> 
-    <node name="acs_running" pkg="acs_route_planning" type="a_star_aco.py" output="screen" >
+    <node name="acs_running" pkg="acs_route_planning" type="a_star_aco_test.py" output="screen" >
         <param name="config" value="$(find tuw_multi_robot_demo)/cfg/maps/$(arg room)/acs_config.yaml" />
         <param name="room" value="$(arg room)" />
     </node>

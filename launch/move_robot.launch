@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+
+<launch>
+    <node name="move_robot" pkg="acs_route_planning" type="move_robot.py" />
+</launch>

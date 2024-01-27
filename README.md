@@ -7,47 +7,29 @@ This package contains an implementation of Ant Colony System for Path Planning
 - [tuw_multi_robot](http://wiki.ros.org/tuw_multi_robot)
 - [map2gazebo](https://github.com/shilohc/map2gazebo)
 
-## Testing
-
-### Generate maps for tests
-
-```bash
-python3 scripts/jody_map_creator/generate_maps.py
-```
-
-### Run tests for ACS algorithm
-
-```bash
-./tests/test_acs.sh
-```
-
-This will run the test enviroment, using the generated maps (in scripts/jody_map_creator/generated_maps), and the tuw_voronoi_graph package
-
 ### Load simulation in Gazebo
+
+It is necessary to use the package [map2gazebo](https://github.com/shilohc/map2gazebo) to generate a world compatible with the gazebo, using a png of the map you want to simulate. The available maps are in [tuw_multi_robot](http://wiki.ros.org/tuw_multi_robot) package. See both documentations.
 
 ```bash
 roslaunch acs_route_planning  world.launch map:=map_name.world room:=room_name
 ```
 Ex:
 ```bash
-roslaunch acs_route_planning  world.launch room:=randomMap56_FixDisc_5_50_2_1
+roslaunch acs_route_planning  world.launch room:=cave
 ```
 
 <h1 align="center">
   <img alt="" width="60%" height="auto" src="./images/gazebo.gif"/>
 </h4>
 
-After roslaunch ACS, you have to launch the move_base, thwn, use rviz to publish the goal point for run acs:
+After roslaunch ACS, the rviz and the gazebo simulation enviroment will be opened, use the Publish Point button to choose the robot’s target:
 
-```bash
-roslaunch acs_route_planning move_base_mapless.launch
-```
+<h1 align="center">
+  <img alt="" width="60%" height="auto" src="./images/navigation_rviz.png"/>
+</h4>
 
-If ACS could found a path, run the move_robot node to send the path to Navigation Stack:
-
-```bash
-rosrun acs_route_planning move_robot.py
-```
+When ACS algorithm find the path, the robot starts the path execution.
 
 <h1 align="center">
   <img alt="" width="60%" height="auto" src="./images/simulation.gif"/>
