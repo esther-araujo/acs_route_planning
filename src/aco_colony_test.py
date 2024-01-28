@@ -291,13 +291,13 @@ def listener():
             # ACS PARAMETERS
             num_rep = data["repetitions"]
 
-            start_x = data["start_point_x"]
-            start_y = data["start_point_y"]
-            goal_x = data["end_point_x"]
-            goal_y = data["end_point_y"]
+            start_x = data["start_point_x"]+map_compensation
+            start_y = data["start_point_y"]+map_compensation
+            goal_x = data["end_point_x"]+map_compensation
+            goal_y = data["end_point_y"]+map_compensation
 
             # START
-            G.add_node(start, pos=(data["start_point_x"], data["start_point_y"]))
+            G.add_node(start, pos=(start_x, start_y))
             
             kdtree = cKDTree(position_list)
 
@@ -306,10 +306,10 @@ def listener():
             # Use the find_closest_node_efficient function to find the closest node for each node and create edges
             closest = find_closest_node_efficient(G, kdtree, node)
             if closest is not None and closest != node:
-                G.add_edge(start, closest, weight=calculate_edge_weight(data["start_point_x"], data["start_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+                G.add_edge(start, closest, weight=calculate_edge_weight(start_x, start_y, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
             
             # GOAL
-            G.add_node(goal, pos=(data["end_point_x"], data["end_point_y"]))
+            G.add_node(goal, pos=(goal_x, goal_y))
             
             kdtree = cKDTree(position_list)
 
@@ -318,7 +318,7 @@ def listener():
             # Use the find_closest_node_efficient function to find the closest node for each node and create edges
             closest = find_closest_node_efficient(G, kdtree, node)
             if closest is not None and closest != node:
-                G.add_edge(goal, closest, weight=calculate_edge_weight(data["end_point_x"], data["end_point_y"], G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
+                G.add_edge(goal, closest, weight=calculate_edge_weight(goal_x, goal_y, G.nodes[closest]['pos'][0], G.nodes[closest]['pos'][1]))
 
         acs = AntSystem(graph=G,start=start, goal=goal, num_ants=num_ants, num_iterations=num_iterations, alpha=alpha, beta=beta, rho=rho, q0=q0, start_x=start_x, start_y=start_y, goal_x=goal_x, goal_y=goal_y)
         best_solution = acs.run()
@@ -367,13 +367,13 @@ def listener():
         except Exception as e:
             print(f"An error occurred: {e}")
 
-        # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+        edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-        # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+        edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
-        # pos = nx.get_node_attributes(G, 'pos')
-        # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-        # plt.show()
+        pos = nx.get_node_attributes(G, 'pos')
+        nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        plt.show()
 
     else:
         while message_count < required_message_count:
