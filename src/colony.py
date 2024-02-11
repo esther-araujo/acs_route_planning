@@ -358,14 +358,14 @@ def listener():
     else:
         print("GOAL NOT FOUNDED")
     
-    edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+    # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-    edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+    # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
-    pos = nx.get_node_attributes(G, 'pos')
+    # pos = nx.get_node_attributes(G, 'pos')
     
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-    plt.show()
+    # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+    # plt.show()
 
     # Filtrar as posições apenas para os nós no caminho
     path_positions = {node: {'x': round(G.nodes[node]['pos'][0] - map_compensation,2), 'y': round(G.nodes[node]['pos'][1] - map_compensation,2)} for node in best_solution}

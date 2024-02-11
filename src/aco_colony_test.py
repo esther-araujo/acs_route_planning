@@ -291,10 +291,10 @@ def listener():
             # ACS PARAMETERS
             num_rep = data["repetitions"]
 
-            start_x = data["start_point_x"]+map_compensation
-            start_y = data["start_point_y"]+map_compensation
-            goal_x = data["end_point_x"]+map_compensation
-            goal_y = data["end_point_y"]+map_compensation
+            start_x = data["start_point_x"]
+            start_y = data["start_point_y"]
+            goal_x = data["end_point_x"]
+            goal_y = data["end_point_y"]
 
             # START
             G.add_node(start, pos=(start_x, start_y))
@@ -416,17 +416,16 @@ def listener():
             print("Best distance:", total_cost)
 
         # Filtrar as posições apenas para os nós no caminho
-        path_positions = {node: {'x': round(G.nodes[node]['pos'][0],2), 'y': round(G.nodes[node]['pos'][1],2)} for node in best_solution}
 
         #print(path_positions)
 
-        edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
+        # edges = [(best_solution[i], best_solution[i + 1]) for i in range(len(best_solution) - 1)]
 
-        edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
+        # edge_colors = ['red' if (u, v) in edges or (v, u) in edges else 'gray' for u, v in G.edges()]
 
-        pos = nx.get_node_attributes(G, 'pos')
-        nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
-        plt.show()
+        # pos = nx.get_node_attributes(G, 'pos')
+        # nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=30, edge_color=edge_colors, width=2.0)
+        # plt.show()
 
 def calculate_path_cost(graph, path):
     cost = 0  # Initialize the cost to 0

@@ -8,8 +8,8 @@ rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"/*
 rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/aco_logs"/*
 rm -rf "/home/esther/catkin_ws/src/acs_route_planning/tests/a_star_logs"/*
 
-log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"
-#log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/aco_logs"
+#log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/acs_logs"
+log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/aco_logs"
 #log_directory="/home/esther/catkin_ws/src/acs_route_planning/tests/a_star_logs"
 
 tuw="/home/esther/catkin_ws/src/tuw_multi_robot/tuw_multi_robot_demo/cfg/maps"
@@ -22,8 +22,8 @@ NC='\033[0m' # No Color
 total_files=$(find "$directory" -maxdepth 1 -type f | wc -l)
 processed_files=0
 #method="test_acs_ambient.launch"
-#method="test_aco_ambient.launch"
-method="test_a_star_ambient.launch"
+method="test_aco_ambient.launch"
+#method="test_a_star_ambient.launch"
 
 num_iterations=100
 file_name=$1
